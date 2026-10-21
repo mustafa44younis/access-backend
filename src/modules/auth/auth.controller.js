@@ -1,0 +1,137 @@
+const authService = require('./auth.service');
+const { registerSchema, loginSchema, forgotPasswordSchema, resetPasswordSchema } = require('./validation');
+
+const register = async (req, res) => {
+  try {
+    const { error, value } = registerSchema.validate(req.body, { abortEarly: false });
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: 'بيانات غير صالحة',
+        errors: error.details.map((err) => err.message),
+      });
+    }
+
+    const data = await authService.register(value);
+
+    res.status(201).json({
+      success: true,
+      message: 'تم إنشاء الحساب بنجاح',
+      data,
+    });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message || 'حدث خطأ في السيرفر',
+    });
+  }
+};
+
+const login = async (req, res) => {
+  try {
+    const { error, value } = loginSchema.validate(req.body, { abortEarly: false });
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: 'بيانات غير صالحة',
+        errors: error.details.map((err) => err.message),
+      });
+    }
+
+    const data = await authService.login(value);
+
+    res.status(200).json({
+      success: true,
+      message: 'تم تسجيل الدخول بنجاح',
+      data,
+    });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message || 'حدث خطأ في السيرفر',
+    });
+  }
+};
+
+const forgotPassword = async (req, res) => {
+  try {
+    const { error, value } = forgotPasswordSchema.validate(req.body);
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: 'بيانات غير صالحة',
+        errors: error.details.map((err) => err.message),
+      });
+    }
+
+    const data = await authService.forgotPassword(value.email);
+
+    res.status(200).json({
+      success: true,
+      message: data.message,
+      data: {
+        resetToken: data.resetToken, // مؤقت للتجربة
+        expiresIn: data.expiresIn,
+      },
+    });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message || 'حدث خطأ في السيرفر',
+    });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { error, value } = resetPasswordSchema.validate(req.body);
+
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: 'بيانات غير صالحة',
+        errors: error.details.map((err) => err.message),
+      });
+    }
+
+    const data = await authService.resetPassword(value);
+
+    res.status(200).json({
+      success: true,
+      message: data.message,
+    });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({
+      success: false,
+      message: err.message || 'حدث خطأ في السيرفر',
+    });
+  }
+};
+ 
+// الحصول على بيانات المستخدم الحالي
+const getMe = async (req, res) => {
+  try {
+    res.status(200).json({
+      success: true,
+      data: {
+        user: req.user,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: 'حدث خطأ في السيرفر',
+    });
+  }
+};
+
+module.exports = {
+  register,
+  login,
+  forgotPassword,
+  resetPassword,
+  getMe
+};
