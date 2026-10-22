@@ -1,0 +1,476 @@
+{
+  "info": {
+    "_postman_id": "a1b2c3d4-1111-4222-8333-access000001",
+    "name": "ACCESS API - Auth",
+    "description": "مجموعة طلبات المصادقة في ACCESS.\n\n## طريقة الاستخدام\n1. شغّل السيرفر: `npm run dev`\n2. تأكد أن رابط `baseUrl` صحيح (افتراضياً `http://localhost:5000`).\n3. نفّذ الطلبات بالترتيب: تسجيل حساب ← تفعيل البريد ← تسجيل الدخول.\n4. توكن الدخول يُحفظ تلقائياً في المتغير `token` عبر Test Script.\n5. توكن التفعيل وإعادة التعيين يصلان في رابط الإيميل، انسخهما إلى `verificationToken` و`resetToken`.\n\n## ملاحظات\n- جميع الردود بصيغة JSON وبالبنية: `{ success, message, data?, errors? }`.\n- مسارات المصادقة محمية بـ Rate Limit: 20 محاولة/15 دقيقة للدخول والتسجيل، و5 محاولات/15 دقيقة لإعادة التعيين والتفعيل.\n- لا يمكن تسجيل الدخول قبل تفعيل البريد الإلكتروني (403).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "verificationToken",
+      "value": ""
+    },
+    {
+      "key": "resetToken",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "النظام",
+      "item": [
+        {
+          "name": "فحص السيرفر (Health Check)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('السيرفر يعمل', () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            },
+            "description": "التحقق من أن السيرفر متصل بقاعدة البيانات ويعمل.\n\n**الرد 200**\n```json\n{ \"success\": true, \"message\": \"ACCESS Backend is running\", \"timestamp\": \"...\" }\n```"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "الدخول الاجتماعي",
+      "item": [
+        {
+          "name": "بدء الدخول عبر Google",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/google?role=client",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "google"
+              ],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "client",
+                  "description": "client / team_leader / specialist — تُستخدم فقط عند إنشاء حساب جديد"
+                }
+              ]
+            },
+            "description": "ينشئ رابط موافقة Google ويعيد توجيه المتصفح إليه.\n\n> لا ترسل هذا الطلب من Postman كـ API عادي؛ افتح الرابط في المتصفح.\n\n### المتطلبات في .env\n`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`\n\n### بعد الموافقة\nيعود Google إلى `GET /api/auth/google/callback` ثم يُحوّل إلى `OAUTH_SUCCESS_REDIRECT` مع:\n`?token=<JWT>&new=1` (new=1 للحسابات الجديدة).\n\n### الردود\n- **302**: تحويل إلى صفحة Google.\n- **503**: الإعدادات غير مكتملة.\n- **400/500**: خطأ في الطلب."
+          },
+          "response": []
+        },
+        {
+          "name": "بدء الدخول عبر LinkedIn",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/linkedin?role=client",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "linkedin"
+              ],
+              "query": [
+                {
+                  "key": "role",
+                  "value": "client",
+                  "description": "client / team_leader / specialist — تُستخدم فقط عند إنشاء حساب جديد"
+                }
+              ]
+            },
+            "description": "ينشئ رابط موافقة LinkedIn ويعيد توجيه المتصفح إليه.\n\n> لا ترسل هذا الطلب من Postman كـ API عادي؛ افتح الرابط في المتصفح.\n\n### المتطلبات في .env\n`LINKEDIN_CLIENT_ID`, `LINKEDIN_CLIENT_SECRET`, `LINKEDIN_REDIRECT_URI`\n\n### بعد الموافقة\nيعود LinkedIn إلى `GET /api/auth/linkedin/callback` ثم يُحوّل إلى `OAUTH_SUCCESS_REDIRECT` مع `?token=<JWT>`.\n\n### الردود\n- **302**: تحويل إلى صفحة LinkedIn.\n- **503**: الإعدادات غير مكتملة."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "المصادقة",
+      "item": [
+        {
+          "name": "تسجيل حساب جديد",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.token) { pm.collectionVariables.set('token', json.data.token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"full_name\": \"أحمد محمد\",\n  \"email\": \"ahmed@example.com\",\n  \"phone\": \"+966501234567\",\n  \"password\": \"Password123\",\n  \"role\": \"client\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            },
+            "description": "إنشاء حساب جديد وإرسال رابط تفعيل إلى البريد الإلكتروني.\n\n### Body\n| الحقل | النوع | إلزامي | الوصف |\n|---|---|---|---|\n| full_name | string | نعم | 3 أحرف على الأقل |\n| email | string | نعم | بريد إلكتروني صالح وفريد |\n| phone | string | لا | 8 إلى 20 خانة |\n| password | string | نعم | 6 أحرف على الأقل |\n| role | string | نعم | client / team_leader / specialist |\n\n### الردود\n- **201**: تم إنشاء الحساب، ويحتوي `data` على `user` و`token`.\n- **400**: بيانات غير صالحة.\n- **409**: البريد الإلكتروني مستخدم بالفعل.\n\n> يتم إرسال رابط التفعيل إلى البريد. في بيئة التطوير إذا لم يُضبط SMTP يُطبع الرابط في الكونسول."
+          },
+          "response": []
+        },
+        {
+          "name": "تفعيل البريد (GET من رابط الإيميل)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify-email?token={{verificationToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "verify-email"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{verificationToken}}",
+                  "description": "التوكن الموجود في رابط التفعيل المرسل بالبريد"
+                }
+              ]
+            },
+            "description": "تفعيل البريد الإلكتروني باستخدام التوكن الموجود في رابط الرسالة.\n\nالرابط المرسل: `{FRONTEND_URL}/verify-email?token=...`\n\n### الردود\n- **200**: تم تفعيل بريدك الإلكتروني بنجاح.\n- **400**: التوكن غير صالح أو منتهي الصلاحية (صالح 24 ساعة)."
+          },
+          "response": []
+        },
+        {
+          "name": "تفعيل البريد (POST من الواجهة)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{verificationToken}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/verify-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "verify-email"
+              ]
+            },
+            "description": "نفس وظيفة طلب GET لكن عبر Body، مناسب للواجهة.\n\n### Body\n`{ \"token\": \"...\" }`\n\n### الردود\n- **200**: تم تفعيل البريد بنجاح.\n- **400**: التوكن غير صالح أو منتهي الصلاحية."
+          },
+          "response": []
+        },
+        {
+          "name": "إعادة إرسال رابط التفعيل",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ahmed@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/resend-verification",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "resend-verification"
+              ]
+            },
+            "description": "إعادة إرسال رابط التفعيل إلى البريد (شاشة نجاح إنشاء الحساب).\n\n### Body\n`{ \"email\": \"...\" }`\n\n### الردود\n- **200**: رسالة عامة: إذا كان البريد مسجلاً سيتم إرسال رابط التفعيل.\n- **400**: بريد إلكتروني غير صالح.\n\n> التوكنات السابقة غير المستخدمة تُحذف تلقائياً."
+          },
+          "response": []
+        },
+        {
+          "name": "تسجيل الدخول",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.token) { pm.collectionVariables.set('token', json.data.token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ahmed@example.com\",\n  \"password\": \"Password123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "تسجيل الدخول والحصول على JWT.\n\n### Body\n`{ \"email\": \"...\", \"password\": \"...\" }`\n\n### الردود\n- **200**: تم تسجيل الدخول، ويحتوي `data` على `user` و`token` (يُحفظ تلقائياً في المتغير `token`).\n- **400**: بيانات غير صالحة.\n- **401**: البريد الإلكتروني أو كلمة المرور غير صحيحة (شاشة خطأ الدخول).\n- **403**: الحساب موقوف أو البريد غير مفعّل.\n\n> الحد: 20 محاولة كل 15 دقيقة."
+          },
+          "response": []
+        },
+        {
+          "name": "نسيت كلمة المرور",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ahmed@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "forgot-password"
+              ]
+            },
+            "description": "إرسال رابط إعادة تعيين كلمة المرور (صالح 15 دقيقة).\n\n### Body\n`{ \"email\": \"...\" }`\n\n### الردود\n- **200**: رسالة عامة دائماً لحماية الخصوصية.\n- **400**: بريد إلكتروني غير صالح.\n\n> انسخ التوكن من رابط الإيميل إلى المتغير `resetToken`.\n> الحد: 5 محاولات كل 15 دقيقة."
+          },
+          "response": []
+        },
+        {
+          "name": "إعادة تعيين كلمة المرور",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{resetToken}}\",\n  \"newPassword\": \"NewPassword123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "reset-password"
+              ]
+            },
+            "description": "تعيين كلمة مرور جديدة باستخدام التوكن.\n\n### Body\n| الحقل | النوع | إلزامي | الوصف |\n|---|---|---|---|\n| token | string | نعم | التوكن من رابط الإيميل |\n| newPassword | string | نعم | 6 أحرف على الأقل |\n\n### الردود\n- **200**: تم تغيير كلمة المرور بنجاح (شاشة النجاح ← التوجه لتسجيل الدخول).\n- **400**: التوكن غير صالح أو منتهي الصلاحية، أو كلمة المرور قصيرة.\n\n> الحد: 5 محاولات كل 15 دقيقة."
+          },
+          "response": []
+        },
+        {
+          "name": "بيانات المستخدم الحالي",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "جلب بيانات المستخدم المسجّل حالياً.\n\n### Header\n`Authorization: Bearer <token>`\n\n### الردود\n- **200**: `data.user`.\n- **401**: غير مصرح أو توكن غير صالح/منتهي.\n- **403**: الحساب موقوف."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

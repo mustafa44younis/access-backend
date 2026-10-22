@@ -47,9 +47,24 @@ const resetPasswordSchema = Joi.object({
   }),
 });
 
+const verifyEmailSchema = Joi.object({
+  token: Joi.string().required().messages({
+    'string.empty': 'التوكن مطلوب',
+  }),
+});
+
+const resendVerificationSchema = Joi.object({
+  email: Joi.string().email().required().messages({
+    'string.email': 'البريد الإلكتروني غير صالح',
+    'string.empty': 'البريد الإلكتروني مطلوب',
+  }),
+});
+
 module.exports = {
   registerSchema,
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  verifyEmailSchema,
+  resendVerificationSchema,
 };

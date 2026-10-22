@@ -3,6 +3,25 @@ const jwt = require('jsonwebtoken');
 const db = require('../../config/db');
 const config = require('../../config');
 const crypto = require('crypto');
+const emailService = require('../../shared/services/email.service');
+
+const createEmailVerificationToken = async (userId) => {
+  const token = crypto.randomBytes(32).toString('hex');
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 ساعة
+
+  await db.query(
+    'DELETE FROM email_verification_tokens WHERE user_id = $1 AND used = false',
+    [userId]
+  );
+
+  await db.query(
+    `INSERT INTO email_verification_tokens (user_id, token, expires_at)
+     VALUES ($1, $2, $3)`,
+    [userId, token, expiresAt]
+  );
+
+  return token;
+};
 
 const register = async ({ full_name, email, phone, password, role }) => {
   // التحقق إذا الإيميل موجود مسبقاً
@@ -44,6 +63,18 @@ const register = async ({ full_name, email, phone, password, role }) => {
 
   const user = result.rows[0];
 
+  // إرسال رابط تفعيل البريد
+  try {
+    const verificationToken = await createEmailVerificationToken(user.id);
+    await emailService.sendVerificationEmail({
+      to: user.email,
+      fullName: user.full_name,
+      token: verificationToken,
+    });
+  } catch (error) {
+    console.error('❌ Failed to send verification email:', error.message);
+  }
+
   // إنشاء التوكن
   const token = jwt.sign(
     { userId: user.id, role },
@@ -66,7 +97,7 @@ const register = async ({ full_name, email, phone, password, role }) => {
 
 const login = async ({ email, password }) => {
   const result = await db.query(
-    `SELECT u.id, u.full_name, u.email, u.phone, u.password, u.is_active, r.name as role
+    `SELECT u.id, u.full_name, u.email, u.phone, u.password, u.is_active, u.is_email_verified, r.name as role
      FROM users u
      JOIN roles r ON u.role_id = r.id
      WHERE u.email = $1`,
@@ -83,6 +114,12 @@ const login = async ({ email, password }) => {
 
   if (!user.is_active) {
     const error = new Error('هذا الحساب موقوف');
+    error.statusCode = 403;
+    throw error;
+  }
+
+  if (!user.is_email_verified) {
+    const error = new Error('يرجى تفعيل بريدك الإلكتروني أولاً');
     error.statusCode = 403;
     throw error;
   }
@@ -130,6 +167,12 @@ const forgotPassword = async (email) => {
   const resetToken = crypto.randomBytes(32).toString('hex');
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 دقيقة
 
+  // حذف أي توكنات سابقة غير مستخدمة
+  await db.query(
+    'DELETE FROM password_reset_tokens WHERE user_id = $1 AND used = false',
+    [user.id]
+  );
+
   // حفظ التوكن
   await db.query(
     `INSERT INTO password_reset_tokens (user_id, token, expires_at)
@@ -137,12 +180,14 @@ const forgotPassword = async (email) => {
     [user.id, resetToken, expiresAt]
   );
 
-  // ملاحظة: في المرحلة الحالية منرجع التوكن في الـ response عشان نختبر
-  // لاحقاً راح نبعت إيميل حقيقي
+  await emailService.sendPasswordResetEmail({
+    to: user.email,
+    fullName: user.full_name,
+    token: resetToken,
+  });
+
   return {
-    message: 'تم إنشاء رابط إعادة التعيين',
-    resetToken, // مؤقت للتجربة فقط
-    expiresIn: '15 minutes',
+    message: 'إذا كان البريد مسجلاً، سيتم إرسال رابط إعادة التعيين',
   };
 };
 
@@ -179,9 +224,66 @@ const resetPassword = async ({ token, newPassword }) => {
   return { message: 'تم تغيير كلمة المرور بنجاح' };
 };
 
+const verifyEmail = async ({ token }) => {
+  const result = await db.query(
+    `SELECT id, user_id FROM email_verification_tokens
+     WHERE token = $1 AND used = false AND expires_at > NOW()`,
+    [token]
+  );
+
+  if (result.rows.length === 0) {
+    const error = new Error('رابط التفعيل غير صالح أو منتهي الصلاحية');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const record = result.rows[0];
+
+  await db.query(
+    'UPDATE users SET is_email_verified = true, updated_at = NOW() WHERE id = $1',
+    [record.user_id]
+  );
+
+  await db.query(
+    'UPDATE email_verification_tokens SET used = true WHERE id = $1',
+    [record.id]
+  );
+
+  return { message: 'تم تفعيل بريدك الإلكتروني بنجاح' };
+};
+
+const resendVerification = async (email) => {
+  const result = await db.query(
+    'SELECT id, full_name, email, is_email_verified FROM users WHERE email = $1',
+    [email]
+  );
+
+  if (result.rows.length === 0) {
+    return { message: 'إذا كان البريد مسجلاً، سيتم إرسال رابط التفعيل' };
+  }
+
+  const user = result.rows[0];
+
+  if (user.is_email_verified) {
+    return { message: 'بريدك الإلكتروني مفعّل بالفعل' };
+  }
+
+  const token = await createEmailVerificationToken(user.id);
+
+  await emailService.sendVerificationEmail({
+    to: user.email,
+    fullName: user.full_name,
+    token,
+  });
+
+  return { message: 'إذا كان البريد مسجلاً، سيتم إرسال رابط التفعيل' };
+};
+
 module.exports = {
   register,
   login,
   forgotPassword,
   resetPassword,
+  verifyEmail,
+  resendVerification,
 };

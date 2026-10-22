@@ -5,7 +5,12 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "migrate": "node src/database/migrate.js"
+    "migrate": "node src/database/migrate.js",
+    "migrate:reset-tokens": "node src/database/migrate-reset-tokens.js",
+    "migrate:email-verification": "node src/database/migrate-email-verification.js",
+    "migrate:oauth": "node src/database/migrate-oauth.js",
+    "migrate:auth": "npm run migrate:reset-tokens && npm run migrate:email-verification && npm run migrate:oauth",
+    "studio": "npx prisma studio --url=\"postgresql://access_user:access123@localhost:5432/access_db\""
   },
   "keywords": [],
   "author": "",
@@ -16,10 +21,12 @@
     "cors": "^2.8.6",
     "dotenv": "^18.0.8",
     "express": "^5.3.0",
+    "express-rate-limit": "^8.7.1",
     "helmet": "^8.3.0",
     "joi": "^18.3.0",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.12.1",
+    "nodemailer": "^10.1.7",
     "pg": "^8.23.1"
   },
   "devDependencies": {
