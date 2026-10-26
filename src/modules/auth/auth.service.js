@@ -5,8 +5,12 @@ const config = require('../../config');
 const crypto = require('crypto');
 const emailService = require('../../shared/services/email.service');
 
+const hashToken = (token) =>
+  crypto.createHash('sha256').update(String(token)).digest('hex');
+
 const createEmailVerificationToken = async (userId) => {
-  const token = crypto.randomBytes(32).toString('hex');
+  const rawToken = crypto.randomBytes(32).toString('hex');
+  const hashedToken = hashToken(rawToken);
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 ساعة
 
   await db.query(
@@ -17,10 +21,10 @@ const createEmailVerificationToken = async (userId) => {
   await db.query(
     `INSERT INTO email_verification_tokens (user_id, token, expires_at)
      VALUES ($1, $2, $3)`,
-    [userId, token, expiresAt]
+    [userId, hashedToken, expiresAt]
   );
 
-  return token;
+  return rawToken;
 };
 
 const register = async ({ full_name, email, phone, password, role }) => {
@@ -163,8 +167,9 @@ const forgotPassword = async (email) => {
 
   const user = result.rows[0];
 
-  // إنشاء توكن عشوائي
+  // إنشاء توكن عشوائي وتشفيره للتخزين في قاعدة البيانات
   const resetToken = crypto.randomBytes(32).toString('hex');
+  const hashedToken = hashToken(resetToken);
   const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 دقيقة
 
   // حذف أي توكنات سابقة غير مستخدمة
@@ -173,11 +178,11 @@ const forgotPassword = async (email) => {
     [user.id]
   );
 
-  // حفظ التوكن
+  // حفظ التوكن مشفراً
   await db.query(
     `INSERT INTO password_reset_tokens (user_id, token, expires_at)
      VALUES ($1, $2, $3)`,
-    [user.id, resetToken, expiresAt]
+    [user.id, hashedToken, expiresAt]
   );
 
   await emailService.sendPasswordResetEmail({
@@ -192,10 +197,11 @@ const forgotPassword = async (email) => {
 };
 
 const resetPassword = async ({ token, newPassword }) => {
+  const hashedToken = hashToken(token);
   const result = await db.query(
     `SELECT * FROM password_reset_tokens 
-     WHERE token = $1 AND used = false AND expires_at > NOW()`,
-    [token]
+     WHERE (token = $1 OR token = $2) AND used = false AND expires_at > NOW()`,
+    [hashedToken, token]
   );
 
   if (result.rows.length === 0) {
@@ -209,26 +215,35 @@ const resetPassword = async ({ token, newPassword }) => {
   // تشفير كلمة المرور الجديدة
   const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-  // تحديث كلمة المرور
-  await db.query(
-    'UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2',
-    [hashedPassword, resetRecord.user_id]
-  );
-
-  // تعليم التوكن كمستخدم
-  await db.query(
-    'UPDATE password_reset_tokens SET used = true WHERE id = $1',
-    [resetRecord.id]
-  );
+  // تحديث كلمة المرور وتعليم التوكن كمستخدم داخل Transaction
+  const client = await db.pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      'UPDATE users SET password = $1, updated_at = NOW() WHERE id = $2',
+      [hashedPassword, resetRecord.user_id]
+    );
+    await client.query(
+      'UPDATE password_reset_tokens SET used = true WHERE id = $1',
+      [resetRecord.id]
+    );
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 
   return { message: 'تم تغيير كلمة المرور بنجاح' };
 };
 
 const verifyEmail = async ({ token }) => {
+  const hashedToken = hashToken(token);
   const result = await db.query(
     `SELECT id, user_id FROM email_verification_tokens
-     WHERE token = $1 AND used = false AND expires_at > NOW()`,
-    [token]
+     WHERE (token = $1 OR token = $2) AND used = false AND expires_at > NOW()`,
+    [hashedToken, token]
   );
 
   if (result.rows.length === 0) {
@@ -239,15 +254,25 @@ const verifyEmail = async ({ token }) => {
 
   const record = result.rows[0];
 
-  await db.query(
-    'UPDATE users SET is_email_verified = true, updated_at = NOW() WHERE id = $1',
-    [record.user_id]
-  );
-
-  await db.query(
-    'UPDATE email_verification_tokens SET used = true WHERE id = $1',
-    [record.id]
-  );
+  // تحديث حالة التفعيل وتعليم التوكن كمستخدم داخل Transaction
+  const client = await db.pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      'UPDATE users SET is_email_verified = true, updated_at = NOW() WHERE id = $1',
+      [record.user_id]
+    );
+    await client.query(
+      'UPDATE email_verification_tokens SET used = true WHERE id = $1',
+      [record.id]
+    );
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 
   return { message: 'تم تفعيل بريدك الإلكتروني بنجاح' };
 };

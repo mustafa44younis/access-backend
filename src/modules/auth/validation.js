@@ -5,7 +5,7 @@ const registerSchema = Joi.object({
     'string.empty': 'الاسم الكامل مطلوب',
     'string.min': 'الاسم يجب أن يكون 3 أحرف على الأقل',
   }),
-  email: Joi.string().email().required().messages({
+  email: Joi.string().email().trim().lowercase().required().messages({
     'string.email': 'البريد الإلكتروني غير صالح',
     'string.empty': 'البريد الإلكتروني مطلوب',
   }),
@@ -21,7 +21,7 @@ const registerSchema = Joi.object({
 });
 
 const loginSchema = Joi.object({
-  email: Joi.string().email().required().messages({
+  email: Joi.string().email().trim().lowercase().required().messages({
     'string.email': 'البريد الإلكتروني غير صالح',
     'string.empty': 'البريد الإلكتروني مطلوب',
   }),
@@ -31,14 +31,14 @@ const loginSchema = Joi.object({
 });
 
 const forgotPasswordSchema = Joi.object({
-  email: Joi.string().email().required().messages({
+  email: Joi.string().email().trim().lowercase().required().messages({
     'string.email': 'البريد الإلكتروني غير صالح',
     'string.empty': 'البريد الإلكتروني مطلوب',
   }),
 });
 
 const resetPasswordSchema = Joi.object({
-  token: Joi.string().required().messages({
+  token: Joi.string().trim().required().messages({
     'string.empty': 'التوكن مطلوب',
   }),
   newPassword: Joi.string().min(6).required().messages({
@@ -48,13 +48,13 @@ const resetPasswordSchema = Joi.object({
 });
 
 const verifyEmailSchema = Joi.object({
-  token: Joi.string().required().messages({
+  token: Joi.string().trim().required().messages({
     'string.empty': 'التوكن مطلوب',
   }),
 });
 
 const resendVerificationSchema = Joi.object({
-  email: Joi.string().email().required().messages({
+  email: Joi.string().email().trim().lowercase().required().messages({
     'string.email': 'البريد الإلكتروني غير صالح',
     'string.empty': 'البريد الإلكتروني مطلوب',
   }),

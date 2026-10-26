@@ -10,6 +10,8 @@
     "migrate:email-verification": "node src/database/migrate-email-verification.js",
     "migrate:oauth": "node src/database/migrate-oauth.js",
     "migrate:auth": "npm run migrate:reset-tokens && npm run migrate:email-verification && npm run migrate:oauth",
+    "migrate:projects": "node src/database/migrate-projects.js",
+    "seed:projects": "node src/database/seed-demo-data.js",
     "studio": "npx prisma studio --url=\"postgresql://access_user:access123@localhost:5432/access_db\""
   },
   "keywords": [],

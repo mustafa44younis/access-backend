@@ -5,6 +5,9 @@ const morgan = require('morgan');
 
 const config = require('./config');
 const authRoutes = require('./modules/auth/auth.routes');
+const dashboardRoutes = require('./modules/dashboard/dashboard.routes');
+const projectsRoutes = require('./modules/projects/projects.routes');
+const milestonesRoutes = require('./modules/milestones/milestones.routes');
 
 const app = express();
 
@@ -23,8 +26,11 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Auth routes
+// Application routes
 app.use('/api/auth', authRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/projects', projectsRoutes);
+app.use('/api/milestones', milestonesRoutes);
 
 // 404 handler
 app.use((req, res) => {

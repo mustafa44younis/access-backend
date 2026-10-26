@@ -23,7 +23,7 @@ const protect = async (req, res, next) => {
 
     // جلب بيانات المستخدم من قاعدة البيانات
     const result = await db.query(
-      `SELECT u.id, u.full_name, u.email, u.phone, u.is_active, r.name as role
+      `SELECT u.id, u.full_name, u.email, u.phone, u.is_active, u.is_email_verified, r.name as role
        FROM users u
        JOIN roles r ON u.role_id = r.id
        WHERE u.id = $1`,
@@ -43,6 +43,13 @@ const protect = async (req, res, next) => {
       return res.status(403).json({
         success: false,
         message: 'هذا الحساب موقوف',
+      });
+    }
+
+    if (!user.is_email_verified) {
+      return res.status(403).json({
+        success: false,
+        message: 'يرجى تفعيل بريدك الإلكتروني أولاً',
       });
     }
 
