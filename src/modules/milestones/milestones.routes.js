@@ -8,6 +8,7 @@ router.use(protect);
 router.get('/:id/review', milestonesController.getMilestoneReview);
 router.post('/:id/request-changes', milestonesController.requestChanges);
 router.post('/:id/approve', milestonesController.approveMilestone);
+router.get('/projects/:projectId/final-delivery', milestonesController.getFinalDelivery);
 router.post('/projects/:projectId/final-signoff', milestonesController.finalSignoff);
 
 module.exports = router;

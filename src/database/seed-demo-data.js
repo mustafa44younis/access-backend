@@ -5,8 +5,13 @@ const seed = async () => {
   try {
     console.log('🌱 Seeding demo data matching UI designs...');
 
-    // 1. جلب أول عميل مسجل في قاعدة البيانات
-    const clientRes = await db.query(
+    // 1. جلب role_id لكل دور
+    const rolesRes = await db.query('SELECT id, name FROM roles');
+    const roleMap = {};
+    rolesRes.rows.forEach(r => { roleMap[r.name] = r.id; });
+
+    // 2. جلب أول عميل مسجل أو إنشاؤه تلقائياً إذا لم يكن موجوداً
+    let clientRes = await db.query(
       `SELECT u.id, u.full_name, u.email 
        FROM users u 
        JOIN roles r ON r.id = u.role_id 
@@ -14,18 +19,30 @@ const seed = async () => {
        ORDER BY u.id ASC LIMIT 1`
     );
 
+    let client;
     if (clientRes.rows.length === 0) {
-      console.log('⚠️ No client found. Please register a client user first.');
-      process.exit(0);
+      console.log('ℹ️ No client found. Creating default client user (younismustafa932@gmail.com)...');
+      const clientPassword = await bcrypt.hash('Password123', 10);
+      const insertClient = await db.query(
+        `INSERT INTO users (
+           full_name, first_name, last_name, email, password, role_id, is_active, is_email_verified
+         ) VALUES ($1, $2, $3, $4, $5, $6, true, true)
+         RETURNING id, full_name, email`,
+        [
+          'مصطفى يونس',
+          'مصطفى',
+          'يونس',
+          'younismustafa932@gmail.com',
+          clientPassword,
+          roleMap['client'],
+        ]
+      );
+      client = insertClient.rows[0];
+      console.log(`✅ Default client created: ${client.full_name} (${client.email})`);
+    } else {
+      client = clientRes.rows[0];
+      console.log(`👤 Using existing client: ${client.full_name} (ID: ${client.id})`);
     }
-
-    const client = clientRes.rows[0];
-    console.log(`👤 Using client: ${client.full_name} (ID: ${client.id})`);
-
-    // 2. جلب role_id لكل دور
-    const rolesRes = await db.query('SELECT id, name FROM roles');
-    const roleMap = {};
-    rolesRes.rows.forEach(r => { roleMap[r.name] = r.id; });
 
     // 3. إنشاء أو تحديث قادة الفرق والمتخصصين
     const defaultPassword = await bcrypt.hash('TeamPass123!', 10);
@@ -216,42 +233,91 @@ const seed = async () => {
       [client.id, noaaProjectId, sallaProjectId, mowedProjectId]
     );
 
-    // 12. بيانات جلسة الاستشارة الذكية وتوليد العقد المبدئي (مطابق للصورة 6)
+    // 12. بيانات جلسة الاستشارة الذكية والمحادثة والملخص الحي وتوليد العقد المبدئي (مطابق لشاشات فيغما 1 و 2 و 3)
     await db.query('DELETE FROM contracts WHERE client_id = $1', [client.id]);
     await db.query('DELETE FROM consultations WHERE client_id = $1', [client.id]);
 
+    const targetAudience = [
+      'المتسوقون في السعودية المهتمون بالمنتجات الحرفية المحلية',
+      'محبو الصناعات اليدوية'
+    ];
+
+    const features = [
+      'كتالوج منتجات مع البحث والتصفية',
+      'الدفع عبر مدى و Apple Pay',
+      'تتبع الطلبات',
+      'لوحة إدارة المنتجات والطلبات'
+    ];
+
+    const suggestedTechnologies = ['Shopify', 'Next.js'];
+
     const consultationRes = await db.query(
       `INSERT INTO consultations (
-         client_id, title, project_type, status, summary, estimated_duration, estimated_cost, consultation_date
+         client_id, title, project_type, status, summary, estimated_duration, estimated_cost,
+         target_audience, features, suggested_technologies, min_budget, max_budget,
+         min_duration_weeks, max_duration_weeks, consultation_type, consultation_date
        ) VALUES (
-         $1, 'جلسة استشارة متجر رواق للأزياء', 'تطوير متجر إلكتروني', 'completed',
-         'تحليل متطلبات إطلاق متجر إلكتروني متكامل للعلامة التجارية رواق يشمل الهوية وتجربة المستخدم وتطوير المتجر',
-         '3 أسابيع', 14500.00, '2026-10-15 14:30:00'
+         $1, 'متجر رواق', 'متجر إلكتروني للمنتجات الحرفية المحلية', 'completed',
+         'متجر إلكتروني للمنتجات الحرفية المحلية يستهدف المتسوقين في السعودية مع لوحة إدارة وبوابات دفع وتتبع للطلبات',
+         '4-5 أسابيع', 14500.00,
+         $2, $3, $4, 12000.00, 18000.00,
+         4, 5, 'ai', '2026-10-18 10:00:00'
        ) RETURNING id`,
-      [client.id]
+      [
+        client.id,
+        JSON.stringify(targetAudience),
+        JSON.stringify(features),
+        JSON.stringify(suggestedTechnologies)
+      ]
     );
 
     const consultationId = consultationRes.rows[0].id;
 
+    // محادثة المساعد الذكي مع العميل (مطابق تماماً للشاشة 1)
+    await db.query(
+      `INSERT INTO consultation_messages (consultation_id, sender, message, suggestions, created_at)
+       VALUES 
+       ($1, 'assistant', 'أهلاً بك! أنا مساعدك الذكي في ACCESS، سأساعدك على تحويل فكرتك إلى ملخص مشروع واضح. ما نوع المشروع الذي تفكر فيه؟', $2, NOW() - INTERVAL '15 minutes'),
+       ($1, 'user', 'أريد متجراً إلكترونياً باسم متجر رواق للمنتجات الحرفية المحلية. يستهدف المتسوقين في السعودية، أحتاج كتالوجاً مع البحث والتصفية، والدفع بمدى و Apple Pay وتتبع الطلبات، ولوحة إدارة المنتجات والطلبات.', '[]'::jsonb, NOW() - INTERVAL '10 minutes'),
+       ($1, 'assistant', 'فكرة واضحة! أضفت احتياجاتك إلى الملخص. أقترح مبدئياً متجر Shopify مع Next.js... التقدير الأولي: 12-18 ألف ر.س خلال 4-5 أسابيع، وإيداع بعد تأكيد النطاق. راجع الملخص وأخبرني بأي إضافة قبل اعتماده.', '[]'::jsonb, NOW() - INTERVAL '5 minutes')`,
+      [
+        consultationId,
+        JSON.stringify(['تطبيق جوال', 'متجر إلكتروني', 'هوية بصرية'])
+      ]
+    );
+
+    // بنود مراحل التنفيذ والتكلفة (مطابق للشاشة 3)
     const paymentTerms = [
       {
-        milestone: 'المرحلة 1: تصميم الهوية ودليل العلامة',
-        percentage: 30,
-        amount: '4,350 ر.س',
+        order: '01',
+        milestone: 'تصميم واجهات وتجربة المستخدم (UI/UX)',
+        duration: '1.5 أسبوع',
+        duration_weeks: 1.5,
+        percentage: 28,
+        amount: '4,000 ر.س',
+        cost: 4000.00,
         due: 'عند بدء المشروع',
         status: 'pending'
       },
       {
-        milestone: 'المرحلة 2: تصميم تجربة وواجهات المتجر (UI/UX)',
-        percentage: 40,
-        amount: '5,800 ر.س',
+        order: '02',
+        milestone: 'تطوير المتجر وربط بوابات الدفع',
+        duration: '2.5 أسبوع',
+        duration_weeks: 2.5,
+        percentage: 55,
+        amount: '8,000 ر.س',
+        cost: 8000.00,
         due: 'عند اعتماد الواجهات',
         status: 'pending'
       },
       {
-        milestone: 'المرحلة 3: التطوير والربط مع بوابات الدفع والتسليم',
-        percentage: 30,
-        amount: '4,350 ر.س',
+        order: '03',
+        milestone: 'الفحص والاختبار والنشر النهائي',
+        duration: '1 أسبوع',
+        duration_weeks: 1.0,
+        percentage: 17,
+        amount: '2,500 ر.س',
+        cost: 2500.00,
         due: 'عند التسليم النهائي والاعتماد',
         status: 'pending'
       }
@@ -259,19 +325,25 @@ const seed = async () => {
 
     const deliverablesSummary = [
       {
-        title: 'تصميم الهوية البصرية ودليل القواعد',
-        cost: 4350.00,
-        description: 'شعار، باليت الألوان، والخطوط الرسمية'
+        order: '01',
+        title: 'تصميم واجهات وتجربة المستخدم (UI/UX)',
+        duration: '1.5 أسبوع',
+        cost: 4000.00,
+        description: 'تصميم تجربة التصفح والشراء في فيجما والتحقق من تجربة المستخدم'
       },
       {
-        title: 'تصميم واجهات المستخدم للمتجر',
-        cost: 5800.00,
-        description: 'تصميم تجربة التصفح والشراء في فيجما'
+        order: '02',
+        title: 'تطوير المتجر وربط بوابات الدفع',
+        duration: '2.5 أسبوع',
+        cost: 8000.00,
+        description: 'برمجة المتجر وربط بوابات الدفع مدى و Apple Pay وبناء لوحة الإدارة'
       },
       {
-        title: 'برمجة المتجر وربط بوابات الدفع',
-        cost: 4350.00,
-        description: 'ربط سلة/زد مع بوابات مدى وأبل باي'
+        order: '03',
+        title: 'الفحص والاختبار والنشر النهائي',
+        duration: '1 أسبوع',
+        cost: 2500.00,
+        description: 'اختبار تجربة الشراء الشاملة، إصلاح الثغرات، وتهيئة المتجر للإطلاق'
       }
     ];
 
@@ -282,11 +354,216 @@ const seed = async () => {
          guarantee_terms
        ) VALUES (
          $1, $2, 'CNT-2026-0891', 'وثيقة نطاق العمل وعقد التنفيذ المبدئي - متجر رواق',
-         'يهدف هذا العقد إلى تحديد الالتزامات ونطاق العمل الخاص بمشروع تصميم وتطوير متجر رواق الإلكتروني بما يشمل الهوية البصرية وتجربة المستخدم والتطوير الشامل وفق أعلى معايير الجودة والسرعة.',
-         14500.00, 'ر.س', 3, 'draft', $3, $4,
-         'تضمن المنصة حماية المدفوعات في حساب الضمان (Escrow) ولا يتم تحرير أي دفعة إلا بعد اعتماد العميل للمخرجات رسمياً.'
+         'اعتماد متجر إلكتروني للمنتجات الحرفية كقوالب وأتمتة وبوابات دفع آمنة وفق أعلى معايير الجودة والسرعة.',
+         14500.00, 'ر.س', 5, 'draft', $3, $4,
+         'تضمن المنصة حماية المدفوعات في حساب الضمان (Escrow) وتقسيم العمل على مرحلتين مع اعتماد تلقائي بعد مرور 72 ساعة.'
        )`,
       [consultationId, client.id, JSON.stringify(paymentTerms), JSON.stringify(deliverablesSummary)]
+    );
+
+    // 13. ملفات الخبراء والمواعيد المتاحة للاستشارات البشرية (مطابق للشاشة 2 يساراً)
+    await db.query('DELETE FROM expert_bookings');
+    await db.query('DELETE FROM expert_availability_slots');
+    await db.query('DELETE FROM expert_profiles');
+
+    // خبير 1: أحمد السالم
+    const ahmedProfileRes = await db.query(
+      `INSERT INTO expert_profiles (
+         user_id, title, bio, rating, reviews_count, badge, consultation_fee, currency, is_available
+       ) VALUES (
+         $1, 'كبير مهندسي الحلول وقائد فرق المتاجر والمنصات',
+         'خبير متخصص في هندسة وبناء منصات التجارة الإلكترونية وحلول الدفع السحابية مع خبرة تزيد عن 8 سنوات.',
+         4.9, 28, 'خبير معتمد', 250.00, 'ر.س', true
+       ) RETURNING id`,
+      [teamUserIds['أحمد السالم']]
+    );
+    const ahmedProfileId = ahmedProfileRes.rows[0].id;
+
+    // خبيرة 2: سارة القحطاني
+    const saraProfileRes = await db.query(
+      `INSERT INTO expert_profiles (
+         user_id, title, bio, rating, reviews_count, badge, consultation_fee, currency, is_available
+       ) VALUES (
+         $1, 'مستشارة تجربة المستخدم وصياغة المنتجات الرقمية',
+         'مستشارة متخصصة في أبحاث وتصميم واجهات وتجربة المستخدم وتطوير المنتجات الرقمية وفق أفضل المعايير.',
+         4.9, 22, 'خبيرة معتمدة', 250.00, 'ر.س', true
+       ) RETURNING id`,
+      [teamUserIds['سارة القحطاني']]
+    );
+    const saraProfileId = saraProfileRes.rows[0].id;
+
+    // المواعيد المتاحة القادمة (أيام: 18، 19، 20 أكتوبر 2026)
+    const slotDates = ['2026-10-18', '2026-10-19', '2026-10-20'];
+    const slotTimes = ['10:00 ص', '11:00 ص', '01:00 م', '03:00 م'];
+
+    for (const expertId of [ahmedProfileId, saraProfileId]) {
+      for (const d of slotDates) {
+        for (const t of slotTimes) {
+          await db.query(
+            `INSERT INTO expert_availability_slots (expert_id, slot_date, slot_time, is_booked)
+             VALUES ($1, $2, $3, false)
+             ON CONFLICT DO NOTHING`,
+            [expertId, d, t]
+          );
+        }
+      }
+    }
+
+    // 14. بذور المعاملات المالية والمحفظة (Payments & Escrow Transactions)
+    await db.query('DELETE FROM transactions');
+    await db.query(
+      `INSERT INTO transactions (
+         user_id, project_id, transaction_number, type, amount, fee, currency,
+         payment_method, status, description, invoice_number, receipt_url, created_at
+       ) VALUES 
+       ($1, $2, 'TXN-2026-891001', 'escrow_deposit', 4000.00, 0.00, 'ر.س', 'mada', 'completed', 'إيداع دفعة مرحلة البداية في حساب الضمان (Escrow) - متجر رواق', 'INV-2026-8901', 'https://invoices.access.agency/receipts/TXN-2026-891001.pdf', NOW() - INTERVAL '3 days'),
+       ($1, $2, 'TXN-2026-891002', 'consultation_fee', 250.00, 0.00, 'ر.س', 'apple_pay', 'completed', 'رسوم استشارة تقنية مع خبير - م. أحمد السالم', 'INV-2026-8902', 'https://invoices.access.agency/receipts/TXN-2026-891002.pdf', NOW() - INTERVAL '5 days'),
+       ($1, NULL, 'TXN-2026-891003', 'wallet_topup', 15000.00, 0.00, 'ر.س', 'visa_mastercard', 'completed', 'شحن رصيد المحفظة المتاح عبر البطاقة الائتمانية', 'INV-2026-8903', 'https://invoices.access.agency/receipts/TXN-2026-891003.pdf', NOW() - INTERVAL '10 days')`,
+      [client.id, sallaProjectId]
+    );
+
+    // 15. بذور المحادثات والرسائل (Messages & Conversations)
+    await db.query('DELETE FROM messages');
+    await db.query('DELETE FROM conversation_participants');
+    await db.query('DELETE FROM conversations');
+
+    // محادثة 1: قناة مشروع هوية نواة
+    const conv1Res = await db.query(
+      `INSERT INTO conversations (project_id, title, type, last_message_text, last_message_at)
+       VALUES ($1, 'قناة مشروع: هوية نواة', 'project_channel', 'تم رفع مسودة دليل الهوية للمراجعة في المرحلة 3', NOW() - INTERVAL '2 hours')
+       RETURNING id`,
+      [noaaProjectId]
+    );
+    const conv1Id = conv1Res.rows[0].id;
+
+    // محادثة 2: قناة مشروع متجر سلة الخير
+    const conv2Res = await db.query(
+      `INSERT INTO conversations (project_id, title, type, last_message_text, last_message_at)
+       VALUES ($1, 'قناة مشروع: متجر سلة الخير', 'project_channel', 'أهلاً بك يا مصطفى، تم تأكيد إيداع الضمان وجاري العمل على الواجهات', NOW() - INTERVAL '1 day')
+       RETURNING id`,
+      [sallaProjectId]
+    );
+    const conv2Id = conv2Res.rows[0].id;
+
+    // إضافة المشاركين
+    // محادثة 1: العميل + أحمد السالم + سارة القحطاني
+    await db.query(
+      `INSERT INTO conversation_participants (conversation_id, user_id, last_read_at)
+       VALUES 
+       ($1, $2, NOW() - INTERVAL '3 hours'),
+       ($1, $3, NOW()),
+       ($1, $4, NOW())`,
+      [conv1Id, client.id, teamUserIds['أحمد السالم'], teamUserIds['سارة القحطاني']]
+    );
+
+    // محادثة 2: العميل + أحمد السالم
+    await db.query(
+      `INSERT INTO conversation_participants (conversation_id, user_id, last_read_at)
+       VALUES 
+       ($1, $2, NOW()),
+       ($1, $3, NOW())`,
+      [conv2Id, client.id, teamUserIds['أحمد السالم']]
+    );
+
+    // رسائل محادثة 1
+    await db.query(
+      `INSERT INTO messages (conversation_id, sender_id, message_text, attachment_url, attachment_name, attachment_type, attachment_size, is_read, created_at)
+       VALUES 
+       ($1, $2, 'السلام عليكم، مرحباً بفريق العمل! نود التركيز على الألوان الترابية والعصرية للهوية.', NULL, NULL, NULL, NULL, true, NOW() - INTERVAL '1 day'),
+       ($1, $3, 'وعليكم السلام يا مصطفى! أهلاً بك. تم استيعاب التوجه وجاري تطبيق باليت الألوان على النماذج الأولية.', NULL, NULL, NULL, NULL, true, NOW() - INTERVAL '18 hours'),
+       ($1, $4, 'تم الانتهاء من مسودة دليل الهوية البصرية وإرفاق الملف للاطلاع والمراجعة.', 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf', 'دليل هوية نواة النسخة المبدئية.pdf', 'PDF', '18.2 MB', false, NOW() - INTERVAL '2 hours')`,
+      [conv1Id, client.id, teamUserIds['أحمد السالم'], teamUserIds['سارة القحطاني']]
+    );
+
+    // رسائل محادثة 2 (مطابقة لصور المحادثة والرسائل الصوتية والرسالة المتعثرة)
+    const waveform = [15, 30, 65, 80, 45, 90, 75, 40, 20, 60, 85, 50, 70, 95, 60, 35, 20, 45, 80, 65];
+    await db.query(
+      `INSERT INTO messages (
+         conversation_id, sender_id, message_text, attachment_url, attachment_name,
+         attachment_type, attachment_size, message_type, audio_duration, audio_waveform,
+         is_failed, is_read, created_at
+       ) VALUES 
+       ($1, $2, 'أهلاً بك يا مصطفى، تم تأكيد إيداع الضمان وجاري العمل على الواجهات والربط التقني.', NULL, NULL, NULL, NULL, 'text', NULL, '[]'::jsonb, false, true, NOW() - INTERVAL '1 day'),
+       ($1, $3, 'أولاً أود أن أوضح أن إتمام العمل يتم وفق جدول زمني دقيق يبدأ من اليوم حتى انتهاء مرحلة التصميم.', NULL, NULL, NULL, NULL, 'text', NULL, '[]'::jsonb, false, true, NOW() - INTERVAL '5 hours'),
+       ($1, $2, 'تسجيل صوتي لملاحظات واجهة المتجر وتعديل الألوان', 'https://assets.access.agency/audio/salla-voice-feedback.mp3', 'ملاحظات_صوتية.mp3', 'MP3', '1.2 MB', 'voice_note', 34, $4::jsonb, false, true, NOW() - INTERVAL '3 hours'),
+       ($1, $3, 'وصلت النقطة بدقة وسأبدأ بمراجعة التعديلات وسنبدأ التنفيذ مباشرة حسب الملاحظات.', NULL, NULL, NULL, NULL, 'text', NULL, '[]'::jsonb, false, true, NOW() - INTERVAL '1 hour'),
+       ($1, $3, 'قمت بمراجعة التعديلات وسأرفق العقد مجدداً بدقة', NULL, NULL, NULL, NULL, 'text', NULL, '[]'::jsonb, true, false, NOW() - INTERVAL '5 minutes')`,
+      [
+        conv2Id,
+        teamUserIds['أحمد السالم'],
+        client.id,
+        JSON.stringify(waveform),
+      ]
+    );
+
+    // 16. بذور مستودع الملفات والمستندات المشتركة للمشروع (مطابق تماماً للشاشة 3 يساراً)
+    await db.query('DELETE FROM project_shared_files');
+    await db.query(
+      `INSERT INTO project_shared_files (
+         project_id, uploaded_by, file_name, file_url, file_type, file_category,
+         file_size, preview_image_url, audio_duration, created_at
+       ) VALUES 
+       ($1, $2, 'عقد تطوير متجر سلة الخير.pdf', 'https://assets.access.agency/docs/contract-salla.pdf', 'PDF', 'documents', '2.4 MB', NULL, NULL, NOW() - INTERVAL '4 days'),
+       ($1, $3, 'معاينة واجهة المتجر الرئيسية.png', 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1200&q=80', 'PNG', 'designs', '1.8 MB', 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80', NULL, NOW() - INTERVAL '2 days'),
+       ($1, $2, 'التسجيل الصوتي لملاحظات العميل.mp3', 'https://assets.access.agency/audio/client-notes.mp3', 'MP3', 'audio', '4.2 MB', NULL, '03:45', NOW() - INTERVAL '1 day'),
+       ($1, $3, 'واجهات متجر سلة الخير - Figma', 'https://figma.com/file/demo-salla-store-access', 'FIGMA', 'designs', 'رابط سحابي', 'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=600&q=80', NULL, NOW() - INTERVAL '12 hours')`,
+      [sallaProjectId, client.id, teamUserIds['أحمد السالم']]
+    );
+
+    // 17. بذور طلب تدخل إدارة المنصة لفض نزاع في المحادثة (مطابق للشاشة 4 يميناً)
+    await db.query('DELETE FROM chat_interventions');
+    await db.query(
+      `INSERT INTO chat_interventions (
+         conversation_id, project_id, requested_by, reason, reason_label,
+         details, include_transcript, status, created_at
+       ) VALUES 
+       ($1, $2, $3, 'dispute_specifications', 'خلاف حول مواصفات العقد', 'يرجى مراجعة نطاق العمل المتفق عليه بخصوص بوابات الدفع الإلكترونية وسرعة الاستجابة', true, 'pending_admin', NOW() - INTERVAL '2 hours')`,
+      [conv2Id, sallaProjectId, client.id]
+    );
+
+    // 18. تحديث المصادقة الثنائية (2FA) والاسم الأول والأخير للعميل
+    const backupCodes = [
+      'A1B2-C3D4', 'E5F6-G7H8', 'I9J0-K1L2', 'M3N4-O5P6',
+      'Q7R8-S9T0', 'U1V2-W3X4', 'Y5Z6-A7B8', 'C9D0-E1F2'
+    ];
+    await db.query(
+      `UPDATE users 
+       SET 
+         first_name = 'مصطفى',
+         last_name = 'يونس',
+         two_factor_enabled = true,
+         two_factor_secret = 'JBSWY3DPEHPK3PXP',
+         two_factor_backup_codes = $1::jsonb
+       WHERE id = $2`,
+      [JSON.stringify(backupCodes), client.id]
+    );
+
+    // 19. بذور الجلسات النشطة والأجهزة المتصلة (مطابق تماماً للشاشة 3 و 4)
+    await db.query('DELETE FROM user_sessions WHERE user_id = $1', [client.id]);
+    await db.query(
+      `INSERT INTO user_sessions (
+         user_id, device_name, device_type, browser, os, ip_address, location, is_current, last_active_at
+       ) VALUES 
+       ($1, 'جهاز Mac Studio - متصفح Safari', 'desktop', 'Safari 17.2', 'macOS Sonoma', '192.168.1.101', 'الرياض، المملكة العربية السعودية', true, NOW()),
+       ($1, 'هاتف جوال iPhone 15 Pro - تطبيق ACCESS', 'mobile', 'ACCESS iOS App', 'iOS 17.4', '178.52.21.90', 'جدة، المملكة العربية السعودية', false, NOW() - INTERVAL '4 hours'),
+       ($1, 'جهاز كمبيوتر Windows 11 - متصفح Chrome', 'desktop', 'Chrome 122.0', 'Windows 11 Pro', '212.118.14.33', 'الرياض، المملكة العربية السعودية', false, NOW() - INTERVAL '2 days')`,
+      [client.id]
+    );
+
+    // 20. بذور التوثيق والاعتماد الرسمي (مطابق لنافذة التوثيق الرسمية في الشاشة 3)
+    await db.query('DELETE FROM user_verifications WHERE user_id = $1', [client.id]);
+    await db.query(
+      `INSERT INTO user_verifications (
+         user_id, id_type, id_number_masked, commercial_register_name,
+         commercial_register_number, freelance_doc_number, authority,
+         is_id_verified, is_commercial_verified, is_contact_verified,
+         status, verified_at
+       ) VALUES (
+         $1, 'national_id', '108929****', 'مؤسسة أفق التقنية للتجارة',
+         '1010******', 'FL-89210-99', 'النفاذ الوطني الموحد / وزارة التجارة',
+         true, true, true, 'verified', NOW() - INTERVAL '30 days'
+       )`,
+      [client.id]
     );
 
     console.log('✅ Demo seed data matching UI designs seeded successfully!');

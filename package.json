@@ -11,6 +11,17 @@
     "migrate:oauth": "node src/database/migrate-oauth.js",
     "migrate:auth": "npm run migrate:reset-tokens && npm run migrate:email-verification && npm run migrate:oauth",
     "migrate:projects": "node src/database/migrate-projects.js",
+    "migrate:contracts": "node src/database/migrate-contracts.js",
+    "migrate:smart-consultations": "node src/database/migrate-smart-consultations.js",
+    "migrate:expert-bookings": "node src/database/migrate-expert-bookings.js",
+    "migrate:payments": "node src/database/migrate-payments.js",
+    "migrate:messages": "node src/database/migrate-messages.js",
+    "migrate:profile": "node src/database/migrate-profile.js",
+    "migrate:disputes": "node src/database/migrate-disputes-and-withdrawals.js",
+    "migrate:chat-advanced": "node src/database/migrate-chat-repository-and-voice.js",
+    "migrate:security": "node src/database/migrate-security-and-kyc.js",
+    "migrate:notifications": "node src/database/migrate-notifications.js",
+    "migrate:all": "npm run migrate && npm run migrate:auth && npm run migrate:projects && npm run migrate:contracts && npm run migrate:smart-consultations && npm run migrate:expert-bookings && npm run migrate:payments && npm run migrate:messages && npm run migrate:profile && npm run migrate:disputes && npm run migrate:chat-advanced && npm run migrate:security && npm run migrate:notifications",
     "seed:projects": "node src/database/seed-demo-data.js",
     "studio": "npx prisma studio --url=\"postgresql://access_user:access123@localhost:5432/access_db\""
   },
@@ -28,8 +39,10 @@
     "joi": "^18.3.0",
     "jsonwebtoken": "^9.0.3",
     "morgan": "^1.12.1",
+    "multer": "^2.5.0",
     "nodemailer": "^10.1.7",
-    "pg": "^8.23.1"
+    "pg": "^8.23.1",
+    "socket.io": "^4.8.4"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

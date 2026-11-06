@@ -1,4 +1,13 @@
 const db = require('../../config/db');
+const { getIO } = require('../../socket');
+const { createNotification } = require('../notifications/notifications.service');
+
+/** helper: يُرسل emit بأمان حتى لو Socket.io غير مهيأ */
+const safeEmit = (room, event, data) => {
+  try {
+    getIO().to(room).emit(event, data);
+  } catch (_) {}
+};
 
 const getMilestoneReview = async (userId, milestoneId) => {
   const result = await db.query(
@@ -112,6 +121,24 @@ const requestChanges = async (userId, milestoneId, { notes }) => {
     [userId, milestone.project_id, `تم إرسال ملاحظات العميل على مرحلة: ${milestone.title}`]
   );
 
+  // ---- إشعار Socket.io بطلب التعديل ----
+  createNotification(userId, {
+    title: 'طلب تعديل على مخرجات المرحلة',
+    body: `تم إرسال ملاحظاتك على مرحلة: ${milestone.title}`,
+    type: 'milestone',
+    link: `/projects/${milestone.project_id}`
+  });
+  safeEmit(`project:${milestone.project_id}`, 'milestone_changes_requested', {
+    projectId: milestone.project_id,
+    milestoneId,
+    milestoneTitle: milestone.title,
+    requestedBy: userId,
+    notes,
+    usedRevisions: newUsed,
+    remainingRevisions: remaining,
+    requestedAt: new Date().toISOString(),
+  });
+
   return {
     message: 'تم إرسال الملاحظات بنجاح إلى قائد الفريق',
     used_revisions: newUsed,
@@ -199,6 +226,24 @@ const approveMilestone = async (userId, milestoneId) => {
      VALUES ($1, $2, 'تم اعتماد مخرجات المرحلة', $3, 'milestone')`,
     [userId, projectId, `اعتمد العميل مخرجات مرحلة: ${milestone.title}`]
   );
+
+  // ---- إشعار Socket.io باعتماد المرحلة ----
+  createNotification(userId, {
+    title: 'تم اعتماد المرحلة بنجاح',
+    body: `تم اعتماد مخرجات مرحلة: ${milestone.title}، نسبة إنجاز المشروع: ${newProgress}%`,
+    type: 'milestone',
+    link: `/projects/${projectId}`
+  });
+  safeEmit(`project:${projectId}`, 'milestone_approved', {
+    projectId,
+    milestoneId,
+    milestoneTitle: milestone.title,
+    approvedBy: userId,
+    newProgress,
+    projectStatus: newProjectStatus,
+    nextPhaseName,
+    approvedAt: new Date().toISOString(),
+  });
 
   return {
     message: 'تم اعتماد مخرجات المرحلة بنجاح',
@@ -297,6 +342,21 @@ const finalSignoff = async (userId, projectId) => {
      VALUES ($1, $2, 'تم اعتماد التسليم النهائي للمشروع', $3, 'system')`,
     [userId, projectId, `تم استلام وتحميل كافة ملفات مشروع ${project.title} بنجاح وتحرير المستحقات`]
   );
+
+  // ---- إشعار Socket.io بانتهاء المشروع ----
+  createNotification(userId, {
+    title: 'مبروك! اكتمل مشروعك بنجاح',
+    body: `تم اعتماد التسليم النهائي لمشروع ${project.title} بنجاح وتحرير المستحقات`,
+    type: 'milestone',
+    link: `/projects/${projectId}`
+  });
+  safeEmit(`project:${projectId}`, 'project_completed', {
+    projectId,
+    projectTitle: project.title,
+    completedBy: userId,
+    completedAt: new Date().toISOString(),
+    budget: project.budget,
+  });
 
   return {
     message: 'تم اعتماد التسليم النهائي للمشروع بنجاح وتحرير المستحقات',

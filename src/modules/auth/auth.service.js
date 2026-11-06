@@ -4,6 +4,7 @@ const db = require('../../config/db');
 const config = require('../../config');
 const crypto = require('crypto');
 const emailService = require('../../shared/services/email.service');
+const twoFactorUtil = require('../../shared/utils/two-factor.util');
 
 const hashToken = (token) =>
   crypto.createHash('sha256').update(String(token)).digest('hex');
@@ -99,9 +100,10 @@ const register = async ({ full_name, email, phone, password, role }) => {
   };
 };
 
-const login = async ({ email, password }) => {
+const login = async ({ email, password, twoFactorCode }, meta = {}) => {
   const result = await db.query(
-    `SELECT u.id, u.full_name, u.email, u.phone, u.password, u.is_active, u.is_email_verified, r.name as role
+    `SELECT u.id, u.full_name, u.email, u.phone, u.password, u.is_active, u.is_email_verified,
+            u.two_factor_enabled, u.two_factor_secret, u.two_factor_backup_codes, r.name as role
      FROM users u
      JOIN roles r ON u.role_id = r.id
      WHERE u.email = $1`,
@@ -133,6 +135,53 @@ const login = async ({ email, password }) => {
     const error = new Error('البريد الإلكتروني أو كلمة المرور غير صحيحة');
     error.statusCode = 401;
     throw error;
+  }
+
+  // التحقق من المصادقة الثنائية (2FA) إذا كانت مفعلة
+  if (user.two_factor_enabled) {
+    if (!twoFactorCode || twoFactorCode.trim() === '') {
+      return {
+        requires_2fa: true,
+        message: 'المصادقة الثنائية مفعلة. يرجى إدخال رمز التحقق (OTP) أو رمز الاسترداد لإتمام الدخول',
+      };
+    }
+
+    const cleanCode = twoFactorCode.trim().toUpperCase();
+    const backupCodes = user.two_factor_backup_codes || [];
+
+    // التحقق من رمز TOTP الحقيقي
+    const isOtpValid = twoFactorUtil.verifyOtpCode(user.two_factor_secret || '', twoFactorCode.trim());
+
+    // التحقق من رمز الاسترداد
+    const backupResult = twoFactorUtil.verifyBackupCode(backupCodes, cleanCode);
+
+    if (!isOtpValid && !backupResult.valid) {
+      const error = new Error('رمز التحقق الثنائي أو رمز الاسترداد غير صحيح');
+      error.statusCode = 401;
+      throw error;
+    }
+
+    // إذا تم استخدام رمز استرداد -> استهلاكه لمرة واحدة فقط
+    if (backupResult.valid) {
+      const updatedCodes = backupCodes.filter((_, i) => i !== backupResult.usedIndex);
+      await db.query(
+        'UPDATE users SET two_factor_backup_codes = $1::jsonb WHERE id = $2',
+        [JSON.stringify(updatedCodes), user.id]
+      );
+    }
+  }
+
+  // تسجيل جلسة نشطة للمستخدم
+  try {
+    const deviceName = meta.userAgent && meta.userAgent.includes('Mobile') ? 'هاتف جوال - تطبيق ACCESS' : 'جهاز كمبيوتر - متصفح الويب';
+    const location = 'المملكة العربية السعودية';
+    await db.query(
+      `INSERT INTO user_sessions (user_id, device_name, ip_address, location, is_current, last_active_at)
+       VALUES ($1, $2, $3, $4, true, NOW())`,
+      [user.id, deviceName, meta.ip || '127.0.0.1', location]
+    );
+  } catch (sessErr) {
+    // عدم تعطيل تسجيل الدخول في حال فشل تسجيل الجلسة
   }
 
   const token = jwt.sign(

@@ -47,7 +47,18 @@ const login = async (req, res) => {
       });
     }
 
-    const data = await authService.login(value);
+    const data = await authService.login(value, {
+      userAgent: req.headers['user-agent'] || 'متصفح ويب',
+      ip: req.ip || req.connection?.remoteAddress || '127.0.0.1',
+    });
+
+    if (data.requires_2fa) {
+      return res.status(200).json({
+        success: true,
+        requires_2fa: true,
+        message: data.message,
+      });
+    }
 
     res.status(200).json({
       success: true,

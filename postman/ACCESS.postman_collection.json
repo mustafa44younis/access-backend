@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "a1b2c3d4-1111-4222-8333-access000001",
     "name": "ACCESS API",
-    "description": "مجموعة طلبات ACCESS Backend.\n\n## الإعداد\n1. `npm run migrate:projects` ثم `node src/database/migrate-contracts.js`\n2. `npm run dev` — بيئة **ACCESS - Local** و `baseUrl` = `http://localhost:5000`\n3. **المصادقة:** تسجيل ← تفعيل البريد ← تسجيل الدخول (`token` يُحفظ تلقائياً).\n4. `npm run seed:projects` بعد تسجيل **عميل** (نفس حساب Login).\n\n## المتغيرات\n| المتغير | من أين |\n|---|---|\n| token | Login |\n| verificationToken / resetToken | رابط الإيميل (التوكن الخام) |\n| consultationId / contractId | سجل الاستشارات |\n| projectId | مشاريع / توقيع عقد / تفاصيل مشروع |\n| milestoneId | تفاصيل مشروع / مراجعة مرحلة |\n\n## ملاحظات\n- كل المسارات المحمية: `Bearer {{token}}` **وبريد مفعّل** (403 إن لم يُفعّل).\n- الردود: `{ success, message, data?, errors? }`.\n- Rate Limit على مسارات المصادقة فقط.",
+    "description": "مجموعة طلبات ACCESS Backend.\n\n## الإعداد\n1. `npm run migrate:projects` ثم `npm run migrate:contracts`\n2. `npm run dev` — بيئة **ACCESS - Local** و `baseUrl` = `http://localhost:5000`\n3. **المصادقة:** تسجيل ← تفعيل البريد ← تسجيل الدخول (`token` يُحفظ تلقائياً).\n4. `npm run seed:projects` بعد تسجيل **عميل** (نفس حساب Login).\n\n## المتغيرات التلقائية\n| المتغير | مصدر التحديث التلقائي |\n|---|---|\n| token | Login / Register |\n| verificationToken / resetToken | رابط الإيميل |\n| consultationId / contractId | سجل الاستشارات / تفاصيل العقد |\n| projectId | تفاصيل المشاريع / توقيع عقد |\n| milestoneId | تفاصيل مشروع / مراجعة مرحلة |\n\n## ملاحظات\n- جميع المتغيرات تُحفظ تلقائياً في كل من Collection Variables و Environment Variables لتعمل بسلاسة تامة.\n- كل المسارات المحمية تتطلب: `Bearer {{token}}` وحساب بريده مفعّل.\n- الردود: `{ success, message, data?, errors? }`.\n- Rate Limit على مسارات المصادقة فقط.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -36,6 +36,26 @@
     },
     {
       "key": "contractId",
+      "value": ""
+    },
+    {
+      "key": "transactionId",
+      "value": ""
+    },
+    {
+      "key": "conversationId",
+      "value": ""
+    },
+    {
+      "key": "failedMessageId",
+      "value": ""
+    },
+    {
+      "key": "sharedFileId",
+      "value": ""
+    },
+    {
+      "key": "sessionId",
       "value": ""
     }
   ],
@@ -148,7 +168,10 @@
                 "exec": [
                   "pm.test('Status 201', () => pm.response.to.have.status(201));",
                   "const json = pm.response.json();",
-                  "if (json.data && json.data.token) { pm.collectionVariables.set('token', json.data.token); }"
+                  "if (json.data && json.data.token) {",
+                  "  pm.collectionVariables.set('token', json.data.token);",
+                  "  pm.environment.set('token', json.data.token);",
+                  "}"
                 ]
               }
             }
@@ -323,7 +346,10 @@
                 "exec": [
                   "pm.test('Status 200', () => pm.response.to.have.status(200));",
                   "const json = pm.response.json();",
-                  "if (json.data && json.data.token) { pm.collectionVariables.set('token', json.data.token); }"
+                  "if (json.data && json.data.token) {",
+                  "  pm.collectionVariables.set('token', json.data.token);",
+                  "  pm.environment.set('token', json.data.token);",
+                  "}"
                 ]
               }
             }
@@ -545,8 +571,10 @@
                   "const rows = pm.response.json().data;",
                   "if (rows && rows.length > 0) {",
                   "  pm.collectionVariables.set('consultationId', rows[0].id);",
+                  "  pm.environment.set('consultationId', rows[0].id);",
                   "  if (rows[0].contract_id) {",
                   "    pm.collectionVariables.set('contractId', rows[0].contract_id);",
+                  "  pm.environment.set('contractId', rows[0].contract_id);",
                   "  }",
                   "}"
                 ]
@@ -588,6 +616,7 @@
                   "const json = pm.response.json();",
                   "if (json.data && json.data.id) {",
                   "  pm.collectionVariables.set('contractId', json.data.id);",
+                  "  pm.environment.set('contractId', json.data.id);",
                   "}"
                 ]
               }
@@ -630,6 +659,7 @@
                   "const json = pm.response.json();",
                   "if (json.data && json.data.id) {",
                   "  pm.collectionVariables.set('contractId', json.data.id);",
+                  "  pm.environment.set('contractId', json.data.id);",
                   "}"
                 ]
               }
@@ -670,9 +700,11 @@
                   "const json = pm.response.json();",
                   "if (json.project_id) {",
                   "  pm.collectionVariables.set('projectId', json.project_id);",
+                  "  pm.environment.set('projectId', json.project_id);",
                   "}",
                   "if (json.contract_id) {",
                   "  pm.collectionVariables.set('contractId', json.contract_id);",
+                  "  pm.environment.set('contractId', json.contract_id);",
                   "}"
                 ]
               }
@@ -714,6 +746,1384 @@
             "description": "توقيع العقد المبدئي وإنشاء مشروع تنفيذي تلقائياً مع مراحل من المخرجات.\n\n### Body\n`signatureName` (اختياري) — الافتراضي اسم المستخدم.\n\n### Tests\nيحفظ `projectId` من `project_id` في الرد.\n\n> العقد بحالة `draft` فقط؛ إن وُقّع مسبقاً يرجع رسالة بدون مشروع جديد."
           },
           "response": []
+        },
+        {
+          "name": "إنشاء جلسة استشارة ذكية جديدة",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('consultationId', json.data.id);",
+                  "  pm.environment.set('consultationId', json.data.id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"متجر رواق للأزياء التراثية\",\n  \"project_type\": \"متجر إلكتروني\",\n  \"initial_idea\": \"متجر إلكتروني متكامل لبيع المنتجات الحرفية مع بوابات دفع مدى و Apple Pay\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contracts/consultations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "contracts",
+                "consultations"
+              ]
+            },
+            "description": "إنشاء جلسة استشارة ذكية جديدة مع توليد رسالة الترحيب الأولى للمساعد الذكي.\n\n### Tests\nيحفظ `consultationId`."
+          },
+          "response": []
+        },
+        {
+          "name": "تفاصيل جلسة الاستشارة والملخص الحي والمحادثة",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "  pm.collectionVariables.set('consultationId', json.data.id);",
+                  "  pm.environment.set('consultationId', json.data.id);",
+                  "  if (json.data.contract_id) {",
+                  "    pm.collectionVariables.set('contractId', json.data.contract_id);",
+                  "    pm.environment.set('contractId', json.data.contract_id);",
+                  "  }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/contracts/consultations/{{consultationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "contracts",
+                "consultations",
+                "{{consultationId}}"
+              ]
+            },
+            "description": "جلب بيانات جلسة الاستشارة والملخص الحي للمشروع وسجل رسائل المحادثة مع المساعد الذكي."
+          },
+          "response": []
+        },
+        {
+          "name": "تعديل مسودة ملخص المشروع (نافذة التعديل)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"متجر رواق\",\n  \"summary\": \"متجر إلكتروني للمنتجات الحرفية المحلية يستهدف المتسوقين في السعودية\",\n  \"target_audience\": [\n    \"المتسوقون في السعودية المهتمون بالمنتجات الحرفية المحلية\",\n    \"محبو الصناعات اليدوية\"\n  ],\n  \"features\": [\n    \"كتالوج منتجات مع البحث والتصفية\",\n    \"الدفع عبر مدى و Apple Pay\",\n    \"تتبع الطلبات\",\n    \"لوحة إدارة المنتجات والطلبات\"\n  ],\n  \"suggested_technologies\": [\n    \"Shopify\",\n    \"Next.js\"\n  ],\n  \"min_budget\": 12000,\n  \"max_budget\": 18000,\n  \"min_duration_weeks\": 4,\n  \"max_duration_weeks\": 5\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contracts/consultations/{{consultationId}}/brief",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "contracts",
+                "consultations",
+                "{{consultationId}}",
+                "brief"
+              ]
+            },
+            "description": "تعديل تفاصيل وحقول ملخص المشروع الحي (مطابق لنافذة التعديل في فيغما الشاشة 2)."
+          },
+          "response": []
+        },
+        {
+          "name": "إرسال رسالة للمساعد الذكي واستلام الرد",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"أريد إضافة تكامل مع نظام الشحن سمسا وأرامكس وتتبع مسار الشحنات لحظياً\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contracts/consultations/{{consultationId}}/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "contracts",
+                "consultations",
+                "{{consultationId}}",
+                "messages"
+              ]
+            },
+            "description": "إرسال رسالة شات جديدة في مساحة الاستشارة الذكية وتلقي رد المساعد الذكي مع الاقتراحات."
+          },
+          "response": []
+        },
+        {
+          "name": "قائمة المستشارين التقنيين والمواعيد المتاحة",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.length > 0) {",
+                  "  pm.collectionVariables.set('expertId', json.data[0].expert_id);",
+                  "  pm.environment.set('expertId', json.data[0].expert_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/contracts/experts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "contracts",
+                "experts"
+              ]
+            },
+            "description": "جلب قائمة المستشارين والخبراء التقنيين (أحمد السالم، سارة القحطاني) مع المواعيد المتاحة لكل خبير (مطابق لنافذة الحجز في الشاشة 2)."
+          },
+          "response": []
+        },
+        {
+          "name": "حجز استشارة مع مستشار تقني بشري (نافذة الحجز)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "const json = pm.response.json();",
+                  "if (json.data && json.data.booking_id) {",
+                  "  pm.collectionVariables.set('bookingId', json.data.booking_id);",
+                  "  pm.environment.set('bookingId', json.data.booking_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"expert_id\": 1,\n  \"session_type\": \"video_call\",\n  \"booking_date\": \"2026-10-18\",\n  \"booking_time\": \"11:00 ص\",\n  \"notes\": \"استشارة لمراجعة ملخص ونطاق عمل متجر رواق للأزياء\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/contracts/experts/book",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "contracts",
+                "experts",
+                "book"
+              ]
+            },
+            "description": "حجز موعد استشارة تقنية مع خبير مع تحديد نوع الجلسة (فيديو أو نصي) والموعد المختار.\n\n### Policy\nقيمة الاستشارة تُخصم بالكامل من تكلفة المشروع عند توقيع العقد النهائي."
+          },
+          "response": []
+        },
+        {
+          "name": "سجل حجوزات الاستشارات الخاصة بالعميل",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/contracts/experts/my-bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "contracts",
+                "experts",
+                "my-bookings"
+              ]
+            },
+            "description": "استعراض جلسات الاستشارة المجدولة للعميل مع رابط الاجتماع الافتراضي."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "الرسائل ومساحة العمل والمستودع المشترك (Messages, Workspace & Repository)",
+      "item": [
+        {
+          "name": "جلب قائمة المحادثات (Conversations List)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var json = pm.response.json();",
+                  "pm.test(\"Status code is 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"Conversations list returned\", function () { pm.expect(json.success).to.be.true; });",
+                  "if (json.data && json.data.length > 0) {",
+                  "    var conv = json.data.find(function(c) { return c.title && c.title.includes(\"سلة الخير\"); }) || json.data[0];",
+                  "    pm.collectionVariables.set(\"conversationId\", String(conv.id));",
+                  "    if (conv.project_id) { pm.collectionVariables.set(\"projectId\", String(conv.project_id)); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/conversations",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "conversations"
+              ]
+            },
+            "description": "جلب قائمة محادثات وقنوات المستخدم مع آخر رسالة وعدد غير المقروء (مطابق لشاشات المحادثة)."
+          }
+        },
+        {
+          "name": "جلب تفاصيل محادثة محددة مع المشاركين (Conversation Details)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/conversations/{{conversationId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "conversations",
+                "{{conversationId}}"
+              ]
+            },
+            "description": "جلب بيانات المحادثة وتفاصيل المشروع المرتبط وقائمة الأعضاء المشاركين وأدوارهم."
+          }
+        },
+        {
+          "name": "جلب سياق المشروع للشريط الجانبي (Project Sidebar Context)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/conversations/{{conversationId}}/context",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "conversations",
+                "{{conversationId}}",
+                "context"
+              ]
+            },
+            "description": "جلب بطاقة سياق المشروع للشريط الجانبي (الشاشة 3): المرحلة الحالية، نسبة الإنجاز، قائد الفريق، ومختصر أحدث الملفات المشتركة."
+          }
+        },
+        {
+          "name": "شريط البحث داخل رسائل المحادثة (Search In-Chat)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/conversations/{{conversationId}}/search?query=التعديلات",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "conversations",
+                "{{conversationId}}",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "التعديلات"
+                }
+              ]
+            },
+            "description": "البحث المباشر داخل رسائل ومرفقات المحادثة مع إبراز النتائج المطابقة (الشاشة 1)."
+          }
+        },
+        {
+          "name": "حالة الاتصال والتواجد المباشر (Online Presence Indicators)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/conversations/{{conversationId}}/presence",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "conversations",
+                "{{conversationId}}",
+                "presence"
+              ]
+            },
+            "description": "جلب حالة الاتصال المباشر للمشاركين (متصل الآن / غير متواجد / آخر ظهور) مع الألوان الخضراء والرمادية (الشاشة 5)."
+          }
+        },
+        {
+          "name": "جلب سجل رسائل المحادثة (Conversation Messages History)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/conversations/{{conversationId}}/messages?page=1&limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "conversations",
+                "{{conversationId}}",
+                "messages"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "جلب كافة الرسائل مرتبة زمنياً تصاعدياً مع دعم المرفقات، الرسائل الصوتية، وحالة القراءة."
+          }
+        },
+        {
+          "name": "إرسال رسالة نصية جديدة (Send Text Message)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"messageText\": \"أهلاً بك م. أحمد، بانتظار استعراض النماذج الأولية المحدثة.\",\n  \"messageType\": \"text\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/conversations/{{conversationId}}/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "conversations",
+                "{{conversationId}}",
+                "messages"
+              ]
+            },
+            "description": "إرسال رسالة نصية وتحديث وقت وآخر رسالة في المحادثة."
+          }
+        },
+        {
+          "name": "إرسال تسجيل صوتي مع الموجة الصوتية والمدة (Send Voice Note)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"messageType\": \"voice_note\",\n  \"audioDuration\": 34,\n  \"audioWaveform\": [\n    15,\n    30,\n    65,\n    80,\n    45,\n    90,\n    75,\n    40,\n    20,\n    60,\n    85,\n    50,\n    70,\n    95,\n    60,\n    35,\n    20,\n    45,\n    80,\n    65\n  ],\n  \"attachmentUrl\": \"https://assets.access.agency/audio/salla-voice-feedback.mp3\",\n  \"attachmentName\": \"ملاحظات_صوتية.mp3\",\n  \"attachmentType\": \"MP3\",\n  \"attachmentSize\": \"1.2 MB\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/conversations/{{conversationId}}/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "conversations",
+                "{{conversationId}}",
+                "messages"
+              ]
+            },
+            "description": "إرسال تسجيل صوتي مباشر مع المؤقت والموجة الصوتية (الشاشة 1 و 3)."
+          }
+        },
+        {
+          "name": "محاكاة إرسال رسالة متعثرة (Simulate Failed Message)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.id) {",
+                  "    pm.collectionVariables.set(\"failedMessageId\", String(json.data.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"messageText\": \"قمت بمراجعة التعديلات وسأرفق الملف مجدداً بدقة\",\n  \"simulateFailure\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/conversations/{{conversationId}}/messages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "conversations",
+                "{{conversationId}}",
+                "messages"
+              ]
+            },
+            "description": "محاكاة فشل إرسال الرسالة لإظهار شريط الخطأ وزر \"إعادة الإرسال\" باللون الأحمر (الشاشة 5)."
+          }
+        },
+        {
+          "name": "إعادة إرسال رسالة متعثرة (Retry Failed Message)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/conversations/{{conversationId}}/messages/{{failedMessageId}}/retry",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "conversations",
+                "{{conversationId}}",
+                "messages",
+                "{{failedMessageId}}",
+                "retry"
+              ]
+            },
+            "description": "إعادة إرسال الرسالة المتعثرة بنجاح وتحديث تاريخ إرسالها وإلغاء حالة التعثر (الشاشة 5)."
+          }
+        },
+        {
+          "name": "طلب تدخل إدارة المنصة لفض نزاع في المحادثة (Dispute Intervention)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"dispute_specifications\",\n  \"reasonLabel\": \"خلاف حول مواصفات العقد\",\n  \"details\": \"يرجى من فريق عمليات ACCESS مراجعة نطاق العقد الموقع وتوضيح التزامات الطرفين.\",\n  \"includeTranscript\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/conversations/{{conversationId}}/intervention",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "conversations",
+                "{{conversationId}}",
+                "intervention"
+              ]
+            },
+            "description": "فتح تذكرة تدخل إداري وإرسال تنبيه نظام داخل المحادثة لتحكيم الخلاف (الشاشة 4 يميناً)."
+          }
+        },
+        {
+          "name": "تعليم المحادثة كمقروءة (Mark As Read)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/conversations/{{conversationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "conversations",
+                "{{conversationId}}",
+                "read"
+              ]
+            },
+            "description": "تصفير عداد الرسائل غير المقروءة للمستخدم في هذه المحادثة."
+          }
+        },
+        {
+          "name": "مستودع الملفات المشتركة - الكل (Project Shared Files - All)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.files && json.data.files.length > 0) {",
+                  "    pm.collectionVariables.set(\"sharedFileId\", String(json.data.files[0].id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/projects/{{projectId}}/shared-files?category=all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "projects",
+                "{{projectId}}",
+                "shared-files"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "all"
+                }
+              ]
+            },
+            "description": "مستودع الملفات والمستندات المشتركة للمشروع بكافة أقسامه وإحصائياتها (الشاشة 3 يساراً)."
+          }
+        },
+        {
+          "name": "مستودع الملفات المشتركة - تصاميم (Shared Files - Designs)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/projects/{{projectId}}/shared-files?category=designs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "projects",
+                "{{projectId}}",
+                "shared-files"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "designs"
+                }
+              ]
+            },
+            "description": "تصفية ملفات التصاميم وواجهات فيجما والصور التوضيحية للمشروع."
+          }
+        },
+        {
+          "name": "مستودع الملفات المشتركة - مستندات (Shared Files - Documents)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/projects/{{projectId}}/shared-files?category=documents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "projects",
+                "{{projectId}}",
+                "shared-files"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "documents"
+                }
+              ]
+            },
+            "description": "تصفية العقود ومستندات مواصفات المشروع (PDF / Docs)."
+          }
+        },
+        {
+          "name": "مستودع الملفات المشتركة - صوتي (Shared Files - Audio)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/projects/{{projectId}}/shared-files?category=audio",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "projects",
+                "{{projectId}}",
+                "shared-files"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "audio"
+                }
+              ]
+            },
+            "description": "تصفية التسجيلات الصوتية والملاحظات المنطوقة مع أشرطة التشغيل والمدة."
+          }
+        },
+        {
+          "name": "رفع ملف جديد لمستودع ملفات المشروع (Upload Shared File)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fileName\": \"مخطط بنية قواعد البيانات والواجهات.pdf\",\n  \"fileUrl\": \"https://assets.access.agency/docs/database-schema-v1.pdf\",\n  \"fileType\": \"PDF\",\n  \"fileCategory\": \"documents\",\n  \"fileSize\": \"3.4 MB\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/projects/{{projectId}}/shared-files",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "projects",
+                "{{projectId}}",
+                "shared-files"
+              ]
+            },
+            "description": "زر \"رفع ملف جديد إلى المحادثة\" لإضافة الملف إلى مستودع المشروع (الشاشة 3)."
+          }
+        },
+        {
+          "name": "معاينة الملف أو الصورة داخل المحادثة (Lightbox Preview)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/messages/files/{{sharedFileId}}/preview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "messages",
+                "files",
+                "{{sharedFileId}}",
+                "preview"
+              ]
+            },
+            "description": "معاينة صورة أو ملف بدقة عالية مع أزرار التحميل والتكبير واسم الرافِع (الشاشة 4 يساراً)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "المدفوعات وحساب الضمان",
+      "item": [
+        {
+          "name": "ملخص المحفظة وحساب الضمان",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"جلب المحفظة بنجاح\", () => pm.expect(pm.response.json().success).to.eql(true));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/wallet",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "wallet"
+              ]
+            },
+            "description": "جلب رصيد المحفظة المتاح ورصيد الضمان وإجمالي المصروفات ووسائل الدفع المدعومة."
+          }
+        },
+        {
+          "name": "حجز وإيداع الدفعة الأولى بحساب الضمان (الخطوة 3)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"Status 200\", () => pm.response.to.have.status(200));",
+                  "pm.test(\"تم إيداع دفعة الضمان بنجاح\", () => pm.expect(pm.response.json().success).to.eql(true));",
+                  "const res = pm.response.json();",
+                  "if (res.data && res.data.transaction_id) {",
+                  "  pm.collectionVariables.set(\"transactionId\", res.data.transaction_id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectId\": \"{{projectId}}\",\n  \"paymentMethod\": \"mada\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/escrow/deposit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "escrow",
+                "deposit"
+              ]
+            },
+            "description": "إيداع دفعة المرحلة الأولى في حساب الضمان لبدء العمل رسمياً (مطابق لزر الخطوة 3 في شريط التقدم بعد توقيع العقد)."
+          }
+        },
+        {
+          "name": "شحن رصيد المحفظة",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 5000,\n  \"paymentMethod\": \"apple_pay\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/wallet/topup",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "wallet",
+                "topup"
+              ]
+            },
+            "description": "شحن رصيد المحفظة المتاح للعميل."
+          }
+        },
+        {
+          "name": "سجل العمليات المالية والفواتير",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/transactions?limit=10&page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "transactions"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "استعراض كشف الحساب وسجل جميع العمليات المالية مع روابط إيصالات الدفع والفواتير."
+          }
+        },
+        {
+          "name": "تفاصيل العملية المالية والفاتورة",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/transactions/{{transactionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "transactions",
+                "{{transactionId}}"
+              ]
+            },
+            "description": "جلب بيانات وتفاصيل فاتورة إلكترونية لعملية مالية محددة."
+          }
+        },
+        {
+          "name": "دفعات المراحل قيد الضمان (جدول المحفظة)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/escrow-milestones",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "escrow-milestones"
+              ]
+            },
+            "description": "جلب جدول دفعات المراحل المحجوزة بحساب الضمان للمشاريع النشطة (مطابق لجدول منتصف الشاشة 3)."
+          }
+        },
+        {
+          "name": "معاينة حجز دفعة الضمان (نافذة التأكيد)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/escrow/preview?projectId={{projectId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "escrow",
+                "preview"
+              ],
+              "query": [
+                {
+                  "key": "projectId",
+                  "value": "{{projectId}}"
+                }
+              ]
+            },
+            "description": "معاينة تفاصيل الخصم والمبلغ المتبقي بالمحفظة قبل تأكيد حجز الضمان (مطابق لنافذة يمين الشاشة 3)."
+          }
+        },
+        {
+          "name": "شحن المحفظة بالبطاقة (نافذة الإيداع مع خيار الرفض)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 5000,\n  \"cardNumber\": \"4111 2222 3333 4444\",\n  \"cardExpiry\": \"12/28\",\n  \"cvv\": \"123\",\n  \"cardholderName\": \"Mustafa Younis\",\n  \"paymentMethod\": \"mada\",\n  \"simulateDecline\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/wallet/deposit-card",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "wallet",
+                "deposit-card"
+              ]
+            },
+            "description": "شحن المحفظة عبر بطاقة مدى أو بطاقة ائتمانية بدون رسوم إضافية، مع إمكانية تجربة رمز الرفض ومحاكاة تعذر الدفع (الشاشة 3 و 5)."
+          }
+        },
+        {
+          "name": "طلب استرداد الرصيد المتاح للحساب البنكي",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 1500,\n  \"bankName\": \"مصرف الراجحي\",\n  \"accountHolderName\": \"مصطفى يونس\",\n  \"iban\": \"SA4480000201608010001234\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/withdraw",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "withdraw"
+              ]
+            },
+            "description": "تقديم طلب استرداد رصيد متاح من المحفظة إلى حساب بنكي سعودي (مطابق لنافذة يسار الشاشة 4)."
+          }
+        },
+        {
+          "name": "سجل طلبات استرداد الرصيد",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/withdrawals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "withdrawals"
+              ]
+            },
+            "description": "استعراض سجل طلبات الاسترداد البنكي وحالة المعالجة."
+          }
+        },
+        {
+          "name": "فتح تذكرة نزاع مالي لتدخل الإدارة",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"projectId\": \"{{projectId}}\",\n  \"milestoneId\": \"{{milestoneId}}\",\n  \"reason\": \"delay\",\n  \"description\": \"تأخر المنفذ عن موعد التسليم المتفق عليه ولم يتم تسليم مسودة المرحلة.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/disputes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "disputes"
+              ]
+            },
+            "description": "طلب تدخل إدارة ACCESS لحل نزاع مالي وتجميد الدفعة في الضمان (مطابق لنافذة وسط الشاشة 4)."
+          }
+        },
+        {
+          "name": "قائمة النزاعات المالية",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/disputes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "disputes"
+              ]
+            },
+            "description": "متابعة تذاكر النزاعات المفتوحة وقرارات إدارة المنصة."
+          }
+        },
+        {
+          "name": "معاينة الفاتورة الضريبية ZATCA المعتمدة",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/invoices/INV-2026-8901",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "invoices",
+                "INV-2026-8901"
+              ]
+            },
+            "description": "معاينة فاتورة ضريبية مبسطة معتمدة بترميز ZATCA QR Code والبيانات الضريبية الكاملة (مطابق للشاشة 4 يميناً)."
+          }
+        },
+        {
+          "name": "رفع إيصال تحويل بنكي للمراجعة المحاسبية",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 15000,\n  \"bankName\": \"مصرف الراجحي\",\n  \"accountHolderName\": \"مصطفى يونس\",\n  \"transferDate\": \"2026-10-31\",\n  \"receiptFileUrl\": \"https://example.com/receipts/transfer-slip.pdf\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/bank-transfers/receipt",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "bank-transfers",
+                "receipt"
+              ]
+            },
+            "description": "إرسال إشعار تحويل بنكي يدوي للتدقيق المحاسبي وإيداع الرصيد (مطابق للشاشة 5 يميناً)."
+          }
+        },
+        {
+          "name": "حالة تدقيق إيصال التحويل البنكي",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/payments/bank-transfers/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "payments",
+                "bank-transfers",
+                "status"
+              ]
+            },
+            "description": "الاطلاع على حالة التدقيق المحاسبي للتحويل البنكي والوقت التقديري للتأكيد (مطابق للشاشة 5 يميناً)."
+          }
         }
       ]
     },
@@ -733,6 +2143,7 @@
                   "const projects = json.data && json.data.projects;",
                   "if (projects && projects.length > 0) {",
                   "  pm.collectionVariables.set('projectId', projects[0].id);",
+                  "  pm.environment.set('projectId', projects[0].id);",
                   "}"
                 ]
               }
@@ -779,10 +2190,12 @@
                   "const json = pm.response.json();",
                   "if (json.data && json.data.id) {",
                   "  pm.collectionVariables.set('projectId', json.data.id);",
+                  "  pm.environment.set('projectId', json.data.id);",
                   "}",
                   "const milestones = json.data && json.data.milestones;",
                   "if (milestones && milestones.length > 0) {",
                   "  pm.collectionVariables.set('milestoneId', milestones[0].id);",
+                  "  pm.environment.set('milestoneId', milestones[0].id);",
                   "}"
                 ]
               }
@@ -823,6 +2236,7 @@
                   "const json = pm.response.json();",
                   "if (json.data && json.data.id) {",
                   "  pm.collectionVariables.set('projectId', json.data.id);",
+                  "  pm.environment.set('projectId', json.data.id);",
                   "}"
                 ]
               }
@@ -880,6 +2294,7 @@
                   "const json = pm.response.json();",
                   "if (json.data && json.data.id) {",
                   "  pm.collectionVariables.set('milestoneId', json.data.id);",
+                  "  pm.environment.set('milestoneId', json.data.id);",
                   "}"
                 ]
               }
@@ -1072,6 +2487,666 @@
             "description": "اعتماد التسليم النهائي للمشروع بعد اكتمال المراحل.\n\n### Path\n`projectId` — UUID المشروع."
           },
           "response": []
+        }
+      ]
+    },
+    {
+      "name": "فريق العمل والمستقلين",
+      "item": [
+        {
+          "name": "أعضاء فريقي في المشاريع النشطة",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/team/my-team",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "team",
+                "my-team"
+              ]
+            },
+            "description": "جلب أعضاء الفريق النشطين في جميع مشاريع العميل الجارية مع أدوارهم ومشاريعهم."
+          }
+        },
+        {
+          "name": "قائمة المستقلين وقادة الفرق بالمنصة",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/team/specialists?limit=20&page=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "team",
+                "specialists"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                }
+              ]
+            },
+            "description": "تصفح والبحث في المستقلين وقادة الفرق المعتمدين بالمنصة مع تقييماتهم ومعدل أسعارهم."
+          }
+        },
+        {
+          "name": "تفاصيل مستقل محدد ومعرض مهاراته",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/team/specialists/7",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "team",
+                "specialists",
+                "7"
+              ]
+            },
+            "description": "جلب الملف المهني لمستقل محدد وخبراته ومعرض مهاراته."
+          }
+        }
+      ]
+    },
+    {
+      "name": "الملف الشخصي والأمان والتوثيق الرسمي (Profile, Security, 2FA & KYC)",
+      "item": [
+        {
+          "name": "جلب بيانات الملف الشخصي والأمان (Get Profile & Security)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
+            },
+            "description": "جلب بيانات المستخدم، الاسم الأول والأخير، حالة المصادقة الثنائية 2FA، عدد الجلسات النشطة، والتوثيق الرسمي."
+          }
+        },
+        {
+          "name": "تحديث البيانات الشخصية (Update Profile Info)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"مصطفى\",\n  \"lastName\": \"يونس\",\n  \"phone\": \"+966501234567\",\n  \"jobTitle\": \"رائد أعمال تقني\",\n  \"companyName\": \"مؤسسة أفق التقنية للتجارة\",\n  \"bio\": \"مؤسس ومدير مشاريع رقمية بالمملكة\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
+            },
+            "description": "تحديث بيانات الاسم الأول واسم العائلة، الجوال، الشركة والنبذة التعريفية مع إرجاع رسالة Toast خضراء."
+          }
+        },
+        {
+          "name": "حذف الصورة الشخصية واسترجاع الأحرف الأولى (Delete Avatar)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile/avatar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile",
+                "avatar"
+              ]
+            },
+            "description": "زر \"حذف الصورة الحالية\" في نافذة تعديل الصورة واستعادة أيقونة الأحرف الأولى (الشاشة 1 في المنتصف)."
+          }
+        },
+        {
+          "name": "تغيير كلمة المرور (Change Password)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"password123\",\n  \"newPassword\": \"newpassword123\",\n  \"confirmPassword\": \"newpassword123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/profile/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile",
+                "change-password"
+              ]
+            },
+            "description": "تغيير كلمة المرور بعد التحقق من كلمة المرور الحالية ومعالجة التنبيهات الحمراء في حال الخطأ (الشاشة 3)."
+          }
+        },
+        {
+          "name": "2FA - الخطوة 1: بدء الإعداد وتوليد الرمز والباركود (Generate 2FA Setup)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile/2fa/generate",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile",
+                "2fa",
+                "generate"
+              ]
+            },
+            "description": "توليد المفتاح اليدوي (مثل JBSWY3DPEHPK3PXP) وكود الـ QR Code لتطبيقات Google Authenticator / 1Password (الشاشة 1 يميناً)."
+          }
+        },
+        {
+          "name": "2FA - الخطوة 2 و 3: التحقق وتفعيل المصادقة الثنائية وحفظ رموز الاسترداد (Verify & Enable 2FA)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/profile/2fa/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile",
+                "2fa",
+                "verify"
+              ]
+            },
+            "description": "إدخال رمز الـ 6 أرقام والتحقق منه ثم إرجاع 8 رموز استرداد احتياطية فريدة مثل A1B2-C3D4 (الشاشة 2)."
+          }
+        },
+        {
+          "name": "2FA - إعادة توليد رموز الاسترداد الاحتياطية (Regenerate Backup Codes)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile/2fa/regenerate-backup-codes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile",
+                "2fa",
+                "regenerate-backup-codes"
+              ]
+            },
+            "description": "توليد قائمة جديدة من 8 رموز استرداد احتياطية صالحة لمرة واحدة."
+          }
+        },
+        {
+          "name": "2FA - تعطيل المصادقة الثنائية (Disable 2FA)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"password123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/profile/2fa/disable",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile",
+                "2fa",
+                "disable"
+              ]
+            },
+            "description": "إيقاف المصادقة الثنائية عبر زر التبديل (Toggle Switch) بعد التأكد من كلمة المرور."
+          }
+        },
+        {
+          "name": "جلب الأجهزة المتصلة والجلسات النشطة (Get Active Sessions)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.data && json.data.sessions && json.data.sessions.length > 0) {",
+                  "    var nonCurrent = json.data.sessions.find(function(s) { return !s.is_current; });",
+                  "    if (nonCurrent) { pm.collectionVariables.set(\"sessionId\", String(nonCurrent.id)); }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile",
+                "sessions"
+              ]
+            },
+            "description": "جلب كافة الجلسات النشطة والأجهزة المتصلة (Mac Studio, iPhone 15 Pro, Windows 11) مع المواقع الجغرافية (الشاشة 3 و 4)."
+          }
+        },
+        {
+          "name": "تسجيل الخروج من جهاز محدد (Revoke Single Session)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile/sessions/{{sessionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile",
+                "sessions",
+                "{{sessionId}}"
+              ]
+            },
+            "description": "إنهاء جلسة لجهاز متصل محدد."
+          }
+        },
+        {
+          "name": "تسجيل الخروج من كافة الأجهزة الأخرى - الزر الأحمر (Revoke All Other Sessions)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile/sessions/revoke-others",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile",
+                "sessions",
+                "revoke-others"
+              ]
+            },
+            "description": "تسجيل الخروج من جميع الأجهزة النشطة الأخرى بضغطة زر وإبقاء الجلسة الحالية فقط (الشاشة 4 يميناً)."
+          }
+        },
+        {
+          "name": "تفاصيل التوثيق والاعتماد الرسمي - نافذة المودال (Official KYC Modal Details)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/profile/verification",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile",
+                "verification"
+              ]
+            },
+            "description": "جلب بيانات الهوية الوطنية المقنعة، السجل التجاري، النفاذ الوطني، وحالة الاعتماد الرسمية لنافذة Modal (الشاشة 3)."
+          }
+        },
+        {
+          "name": "تقديم طلب تحديث التوثيق الرسمي (Request KYC Update)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"commercialRegisterName\": \"مؤسسة أفق التقنية للاتصالات وتقنية المعلومات\",\n  \"commercialRegisterNumber\": \"1010892019\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/profile/verification/request",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile",
+                "verification",
+                "request"
+              ]
+            },
+            "description": "تقديم طلب تحديث السجل التجاري أو الهوية الوطنية لمطابقتها مع الجهات الحكومية الرسمية."
+          }
+        },
+        {
+          "name": "تحديث تفضيلات الإشعارات والمظهر (Update Preferences)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"themePreference\": \"light\",\n  \"notificationPreferences\": {\n    \"email_notifications\": true,\n    \"project_updates\": true,\n    \"security_alerts\": true\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/profile/preferences",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "profile",
+                "preferences"
+              ]
+            },
+            "description": "تحديث إعدادات التنبيهات الأمنية ومظهر الواجهة."
+          }
+        }
+      ]
+    },
+    {
+      "name": "رفع وتخزين الملفات (File Uploads)",
+      "item": [
+        {
+          "name": "رفع ملف عام (مستند، صورة، ملف صوتي)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "description": "الملف المراد رفعه (PDF, PNG, JPG, MP3, ZIP...)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/upload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "upload"
+              ]
+            },
+            "description": "رفع ملف حقيقي وتخزينه في السيرفر مع تصنيف فئته وتنسيق حجمه وإرجاع الرابط الكامل له."
+          }
+        },
+        {
+          "name": "رفع وتحديث الصورة الشخصية (Upload Avatar)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "avatar",
+                  "type": "file",
+                  "description": "الصورة الشخصية (JPG, PNG, WebP)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/upload/avatar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "upload",
+                "avatar"
+              ]
+            },
+            "description": "رفع صورة شخصية وتحديث حقل avatar_url في جدول المستخدمين مباشرة."
+          }
+        }
+      ]
+    },
+    {
+      "name": "الإشعارات والتنبيهات (Notifications)",
+      "item": [
+        {
+          "name": "قائمة الإشعارات وعدد غير المقروء (Get Notifications)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                },
+                {
+                  "key": "unreadOnly",
+                  "value": "false"
+                }
+              ]
+            },
+            "description": "جلب إشعارات المستخدم وتحديث عداد الإشعارات غير المقروءة في شريط التنقل العلوي."
+          }
+        },
+        {
+          "name": "تعليم جميع الإشعارات كمقروءة (Mark All As Read)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/read-all",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "read-all"
+              ]
+            },
+            "description": "تصفير عداد الإشعارات غير المقروءة للمستخدم."
+          }
+        },
+        {
+          "name": "تعليم إشعار محدد كمقروء (Mark Notification As Read)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notifications/1/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notifications",
+                "1",
+                "read"
+              ]
+            },
+            "description": "تعليم إشعار واحد كمقروء عند النقر عليه."
+          }
         }
       ]
     }
