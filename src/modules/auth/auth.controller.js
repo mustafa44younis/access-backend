@@ -152,6 +152,7 @@ const verifyEmail = async (req, res) => {
   }
 };
 
+
 const resendVerification = async (req, res) => {
   try {
     const { error, value } = resendVerificationSchema.validate(req.body);
