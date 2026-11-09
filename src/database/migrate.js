@@ -23,7 +23,7 @@ const migrate = async () => {
         password VARCHAR(255) NOT NULL,
         role_id INTEGER REFERENCES roles(id) ON DELETE RESTRICT,
         is_active BOOLEAN DEFAULT true,
-        is_email_verified BOOLEAN DEFAULT false,
+        is_email_verified BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );

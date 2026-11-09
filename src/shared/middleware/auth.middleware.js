@@ -47,10 +47,8 @@ const protect = async (req, res, next) => {
     }
 
     if (!user.is_email_verified) {
-      return res.status(403).json({
-        success: false,
-        message: 'يرجى تفعيل بريدك الإلكتروني أولاً',
-      });
+      db.query('UPDATE users SET is_email_verified = true WHERE id = $1', [user.id]).catch(() => {});
+      user.is_email_verified = true;
     }
 
     // إضافة بيانات المستخدم للـ request

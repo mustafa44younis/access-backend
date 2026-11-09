@@ -58,27 +58,15 @@ const register = async ({ full_name, email, phone, password, role }) => {
   // تشفير كلمة المرور
   const hashedPassword = await bcrypt.hash(password, 12);
 
-  // إنشاء المستخدم
+  // إنشاء المستخدم (مفعّل ومؤكد تلقائياً للتسجيل السريع)
   const result = await db.query(
-    `INSERT INTO users (full_name, email, phone, password, role_id)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO users (full_name, email, phone, password, role_id, is_email_verified)
+     VALUES ($1, $2, $3, $4, $5, true)
      RETURNING id, full_name, email, phone, role_id, created_at`,
     [full_name, email, phone || null, hashedPassword, roleId]
   );
 
   const user = result.rows[0];
-
-  // إرسال رابط تفعيل البريد
-  try {
-    const verificationToken = await createEmailVerificationToken(user.id);
-    await emailService.sendVerificationEmail({
-      to: user.email,
-      fullName: user.full_name,
-      token: verificationToken,
-    });
-  } catch (error) {
-    console.error('❌ Failed to send verification email:', error.message);
-  }
 
   // إنشاء التوكن
   const token = jwt.sign(
@@ -125,9 +113,9 @@ const login = async ({ email, password, twoFactorCode }, meta = {}) => {
   }
 
   if (!user.is_email_verified) {
-    const error = new Error('يرجى تفعيل بريدك الإلكتروني أولاً');
-    error.statusCode = 403;
-    throw error;
+    // تفعيل البريد تلقائياً لتسجيل الدخول السريع دون انتظار
+    db.query('UPDATE users SET is_email_verified = true WHERE id = $1', [user.id]).catch(() => {});
+    user.is_email_verified = true;
   }
 
   const isMatch = await bcrypt.compare(password, user.password);

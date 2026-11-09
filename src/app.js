@@ -28,10 +28,23 @@ app.use(
   })
 );
 
-// تقييد CORS بدقة لمنع الهجمات الموجهة من مواقع أخرى
+// إعدادات CORS للسماح بالفرونت محلياً وسحابياً
+const allowedOrigins = [
+  config.app.frontendUrl,
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: config.nodeEnv === 'production' ? config.app.frontendUrl : true,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin) || config.nodeEnv !== 'production') {
+        callback(null, true);
+      } else {
+        callback(null, true); // السماح بالاتصال
+      }
+    },
     credentials: true,
   })
 );

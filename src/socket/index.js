@@ -39,7 +39,7 @@ const initSocket = (httpServer) => {
         `SELECT u.id, u.full_name, u.email, u.avatar_url, r.name AS role
          FROM users u
          JOIN roles r ON u.role_id = r.id
-         WHERE u.id = $1 AND u.is_active = true AND u.is_email_verified = true`,
+         WHERE u.id = $1 AND u.is_active = true`,
         [decoded.userId]
       );
 
