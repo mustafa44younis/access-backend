@@ -91,7 +91,7 @@ const register = async ({ full_name, email, phone, password, role }) => {
 const login = async ({ email, password, twoFactorCode }, meta = {}) => {
   const result = await db.query(
     `SELECT u.id, u.full_name, u.email, u.phone, u.password, u.is_active, u.is_email_verified,
-            u.two_factor_enabled, u.two_factor_secret, u.two_factor_backup_codes, r.name as role
+            u.two_factor_enabled, u.two_factor_secret, u.two_factor_backup_codes, r.name as role, u.avatar_url
      FROM users u
      JOIN roles r ON u.role_id = r.id
      WHERE u.email = $1`,
@@ -185,6 +185,7 @@ const login = async ({ email, password, twoFactorCode }, meta = {}) => {
       email: user.email,
       phone: user.phone,
       role: user.role,
+      avatar_url: user.avatar_url || null,
     },
     token,
   };
