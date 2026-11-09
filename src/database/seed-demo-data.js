@@ -531,7 +531,7 @@ const seed = async () => {
        SET 
          first_name = 'مصطفى',
          last_name = 'يونس',
-         two_factor_enabled = true,
+         two_factor_enabled = false,
          two_factor_secret = 'JBSWY3DPEHPK3PXP',
          two_factor_backup_codes = $1::jsonb
        WHERE id = $2`,
