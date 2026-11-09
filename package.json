@@ -5,6 +5,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "postinstall": "prisma generate",
     "migrate": "node src/database/migrate.js",
     "migrate:reset-tokens": "node src/database/migrate-reset-tokens.js",
     "migrate:email-verification": "node src/database/migrate-email-verification.js",
