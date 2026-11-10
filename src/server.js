@@ -18,10 +18,10 @@ const startServer = async () => {
     // تهيئة Socket.io
     initSocket(httpServer);
 
-    httpServer.listen(PORT, () => {
-      console.log(`🚀 ACCESS Backend running on http://localhost:${PORT}`);
+    httpServer.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 ACCESS Backend running on http://0.0.0.0:${PORT}`);
       console.log(`🌍 Environment: ${config.nodeEnv}`);
-      console.log(`⚡ WebSocket (Socket.io) is active on ws://localhost:${PORT}`);
+      console.log(`⚡ WebSocket (Socket.io) is active on ws://0.0.0.0:${PORT}`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);

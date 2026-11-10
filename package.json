@@ -5,7 +5,6 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "postinstall": "prisma generate",
     "migrate": "node src/database/migrate.js",
     "migrate:reset-tokens": "node src/database/migrate-reset-tokens.js",
     "migrate:email-verification": "node src/database/migrate-email-verification.js",
@@ -23,15 +22,13 @@
     "migrate:security": "node src/database/migrate-security-and-kyc.js",
     "migrate:notifications": "node src/database/migrate-notifications.js",
     "migrate:all": "npm run migrate && npm run migrate:auth && npm run migrate:projects && npm run migrate:contracts && npm run migrate:smart-consultations && npm run migrate:expert-bookings && npm run migrate:payments && npm run migrate:messages && npm run migrate:profile && npm run migrate:disputes && npm run migrate:chat-advanced && npm run migrate:security && npm run migrate:notifications",
-    "seed:projects": "node src/database/seed-demo-data.js",
-    "studio": "npx prisma studio --url=\"postgresql://access_user:access123@localhost:5432/access_db\""
+    "seed:projects": "node src/database/seed-demo-data.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
   "dependencies": {
-    "@prisma/client": "^x.x.x",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^18.0.8",
@@ -44,7 +41,6 @@
     "multer": "^2.5.0",
     "nodemailer": "^10.1.7",
     "pg": "^8.23.1",
-    "prisma": "^5.x.x",
     "socket.io": "^4.8.4"
   },
   "devDependencies": {
